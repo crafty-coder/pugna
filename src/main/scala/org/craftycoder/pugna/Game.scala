@@ -16,7 +16,7 @@
 
 package org.craftycoder.pugna
 
-import akka.typed.scaladsl.Actor
+import akka.typed.scaladsl.{ Actor, ActorContext }
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna
@@ -39,8 +39,7 @@ object Game extends Logging {
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
 
-
-  def apply() : Behavior[Command] = preparation(Set.empty)
+  def apply(): Behavior[Command] = preparation(Set.empty)
 
   private def preparation(players: Set[Player]): Behavior[Command] =
     Actor.immutable {
@@ -58,8 +57,7 @@ object Game extends Logging {
         Actor.same
 
       case (ctx, StartGame(replyTo)) =>
-        val board: ActorRef[pugna.Command] =
-          ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER), Board.Name)
+        val board: ActorRef[pugna.Command] = createBoard(players, ctx)
         replyTo ! GameStarted
         gameStarted(board, players)
 
@@ -68,6 +66,10 @@ object Game extends Logging {
         Actor.same
 
     }
+
+  protected def createBoard(players: Set[Player],
+                            ctx: ActorContext[Command]): ActorRef[pugna.Command] =
+    ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER), Board.Name)
 
   private def gameStarted(board: ActorRef[pugna.Command], players: Set[Player]): Behavior[Command] =
     Actor.immutable {
