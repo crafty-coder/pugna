@@ -16,10 +16,13 @@
 
 package org.craftycoder.pugna
 
-import scala.concurrent.duration.FiniteDuration
+import scala.util.Random
 
-object Config {
-  final case class Api(address: String, port: Int, askTimeout: FiniteDuration)
+object RandomCoordinates {
+
+  def next(size: Int): Coordinates = Coordinates(
+    x = Random.nextInt(size),
+    y = Random.nextInt(size)
+  )
+
 }
-
-final case class Config(api: Config.Api)

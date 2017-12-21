@@ -25,8 +25,7 @@ final class RootActor(config: Config) extends Actor with ActorLogging {
 
   private implicit val mat: Materializer = ActorMaterializer()
 
-  private val game =
-    context.spawn(Game(Set.empty), Game.Name)
+  private val game = context.spawn(Game(Set.empty), Game.Name)
 
   private val api = {
     import config.api._
@@ -42,4 +41,5 @@ final class RootActor(config: Config) extends Actor with ActorLogging {
       log.error(s"Shutting down, because actor ${actor.path} terminated!")
       context.system.terminate()
   }
+
 }

@@ -16,14 +16,16 @@
 
 package org.craftycoder.pugna
 
-import akka.stream.Materializer
-import akka.typed.{ ActorRef, Behavior }
 import akka.typed.scaladsl.Actor
+import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
+import org.craftycoder.pugna
 
 object Game extends Logging {
 
-  final val Name = "game"
+  val Name                = "game"
+  val BOARD_SIZE          = 50
+  val NUM_SOLDIERS_PLAYER = 10
 
   def addPlayer(player: Player)(replyTo: ActorRef[AddPlayerReply]): AddPlayer =
     AddPlayer(player, replyTo)
@@ -31,7 +33,16 @@ object Game extends Logging {
   def getPlayers()(replyTo: ActorRef[GetPlayersReply]): GetPlayers =
     GetPlayers(replyTo)
 
-  def apply(players: Set[Player])(implicit mat: Materializer): Behavior[Command] =
+  def startGame()(replyTo: ActorRef[StartGameReply]): StartGame =
+    StartGame(replyTo)
+
+  def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
+    GetBoardPositions(replyTo)
+
+
+  def apply() : Behavior[Command] = preparation(Set.empty)
+
+  private def preparation(players: Set[Player]): Behavior[Command] =
     Actor.immutable {
       case (_, AddPlayer(player, replyTo)) =>
         if (players.exists(p => p.name == player.name || p.host == player.host)) {
@@ -39,25 +50,57 @@ object Game extends Logging {
           Actor.same
         } else {
           replyTo ! PlayerAdded(player)
-          Game(players + player)
+          preparation(players + player)
         }
 
       case (_, GetPlayers(replyTo)) =>
         replyTo ! Players(players.map(_.name))
         Actor.same
+
+      case (ctx, StartGame(replyTo)) =>
+        val board: ActorRef[pugna.Command] =
+          ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER), Board.Name)
+        replyTo ! GameStarted
+        gameStarted(board, players)
+
+      case (_, GetBoardPositions(replyTo)) =>
+        replyTo ! BoardStateNotAvailable
+        Actor.same
+
+    }
+
+  private def gameStarted(board: ActorRef[pugna.Command], players: Set[Player]): Behavior[Command] =
+    Actor.immutable {
+      case (_, GetBoardPositions(replyTo)) =>
+        board ! GetBoardState(replyTo)
+        Actor.same
+      case (_, GetPlayers(replyTo)) =>
+        replyTo ! Players(players.map(_.name))
+        Actor.same
+      case (_, AddPlayer(_, replyTo)) =>
+        replyTo ! GameAlreadyStarted
+        Actor.same
+      case (_, StartGame(replyTo)) =>
+        replyTo ! GameAlreadyStarted
+        Actor.same
     }
 
   sealed trait Command
-  sealed trait Event
 
   final case class AddPlayer(player: Player, replyTo: ActorRef[AddPlayerReply]) extends Command
   final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])               extends Command
+  final case class StartGame(replyTo: ActorRef[StartGameReply])                 extends Command
+  final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply])     extends Command
 
   sealed trait AddPlayerReply
   final case object DuplicatePlayer            extends AddPlayerReply
-  final case class PlayerAdded(player: Player) extends AddPlayerReply with Event
+  final case object GameAlreadyStarted         extends AddPlayerReply with StartGameReply
+  final case class PlayerAdded(player: Player) extends AddPlayerReply
 
   sealed trait GetPlayersReply
-  final case class Players(players: Set[String]) extends GetPlayersReply with Event
+  final case class Players(players: Set[String]) extends GetPlayersReply
+
+  sealed trait StartGameReply
+  final case object GameStarted extends StartGameReply
 
 }

@@ -21,7 +21,7 @@ import java.net.InetSocketAddress
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.StatusCodes.{ Conflict, Created }
+import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.{ Directives, Route }
 import akka.stream.Materializer
 import akka.typed.{ ActorRef, Behavior }
@@ -29,7 +29,9 @@ import akka.typed.scaladsl.Actor
 import akka.typed.scaladsl.AskPattern.Askable
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
+import io.circe.Json
 import org.apache.logging.log4j.scala.Logging
+import org.craftycoder.pugna.Game.GameStarted
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -77,23 +79,47 @@ object Api extends Logging {
     import ErrorAccumulatingCirceSupport._
     import io.circe.generic.auto._
 
-    pathEndOrSingleSlash {
-      get {
-        complete {
-          import Game._
-          (game ? getPlayers()).mapTo[Players].map(_.players)
+    path("players") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            import Game._
+            (game ? getPlayers()).mapTo[Players].map(_.players)
+          }
+        } ~
+        post {
+          entity(as[Player]) { player =>
+            import Game._
+            onSuccess(game ? addPlayer(player)) {
+              case DuplicatePlayer    => complete(Conflict)
+              case GameAlreadyStarted => complete(Conflict)
+              case PlayerAdded(_)     => complete(Created)
+            }
+          }
         }
-      } ~
-      post {
-        entity(as[Player]) { player =>
+      }
+    } ~ pathPrefix("game") {
+      path("start") {
+        get {
           import Game._
-          onSuccess(game ? addPlayer(player)) {
-            case DuplicatePlayer => complete(Conflict)
-            case PlayerAdded(_)  => complete(Created)
+          onSuccess(game ? startGame()) {
+            case GameAlreadyStarted => complete(Conflict)
+            case GameStarted        => complete(Created)
+          }
+        }
+      }
+    } ~ pathPrefix("board") {
+      pathEndOrSingleSlash {
+        get {
+          import Game._
+          onSuccess(game ? getPositions()) {
+            case b @ BoardState(_, _, _) => complete(b)
+            case BoardStateNotAvailable  => complete(NotFound)
           }
         }
       }
     }
+
   }
 
   sealed trait Command

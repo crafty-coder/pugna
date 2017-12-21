@@ -29,7 +29,7 @@ class GameSpec extends WordSpec with Matchers {
 
       "result in a PlayerAdded response when Player has unique name and host" in {
 
-        val context = new EffectfulActorContext("add-player", Game(Set.empty)(null), 42, null)
+        val context = new EffectfulActorContext("add-player", Game(Set.empty), 42, null)
 
         val inbox = Inbox[AddPlayerReply]("add-player")
         context.run(AddPlayer(Player("name", "host"), inbox.ref))
@@ -41,7 +41,7 @@ class GameSpec extends WordSpec with Matchers {
 
         val context =
           new EffectfulActorContext("add-player",
-                                    Game(Set(Player("name", "host1")))(null),
+                                    Game(Set(Player("name", "host1"))),
                                     42,
                                     null)
 
@@ -55,7 +55,7 @@ class GameSpec extends WordSpec with Matchers {
 
         val context =
           new EffectfulActorContext("add-player",
-                                    Game(Set(Player("name1", "host")))(null),
+                                    Game(Set(Player("name1", "host"))),
                                     42,
                                     null)
 
@@ -71,7 +71,7 @@ class GameSpec extends WordSpec with Matchers {
       "result in a Players empty when no players" in {
 
         val context =
-          new EffectfulActorContext("get-players", Game(Set.empty)(null), 42, null)
+          new EffectfulActorContext("get-players", Game(Set.empty), 42, null)
 
         val inbox = Inbox[GetPlayersReply]("get-players")
         context.run(GetPlayers(inbox.ref))
@@ -83,7 +83,7 @@ class GameSpec extends WordSpec with Matchers {
 
         val context =
           new EffectfulActorContext("get-players",
-                                    Game(Set(Player("name", "host")))(null),
+                                    Game(Set(Player("name", "host"))),
                                     42,
                                     null)
 
