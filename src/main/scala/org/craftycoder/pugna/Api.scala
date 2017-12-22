@@ -24,14 +24,13 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.{ Directives, Route }
 import akka.stream.Materializer
-import akka.typed.{ ActorRef, Behavior }
 import akka.typed.scaladsl.Actor
 import akka.typed.scaladsl.AskPattern.Askable
+import akka.typed.{ ActorRef, Behavior }
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
-import io.circe.Json
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Game.GameStarted
+import org.craftycoder.pugna.Board.{ BoardState, BoardStateNotAvailable }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -127,4 +126,5 @@ object Api extends Logging {
   private final case class HandleBound(address: InetSocketAddress) extends Command
 
   private final case object HandleBindFailure extends Command
+
 }

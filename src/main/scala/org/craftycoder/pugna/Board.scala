@@ -49,7 +49,7 @@ object Board extends Logging {
     val positions: mutable.HashMap[Coordinates, Player] = mutable.HashMap.empty
     for {
       player <- players
-      i      <- 0 to numOfSoldiers
+      i      <- 0 until numOfSoldiers
     } yield {
       var position = RandomCoordinates.next(boardSize)
       while (positions.contains(position)) {
@@ -61,14 +61,16 @@ object Board extends Logging {
     }
     positions
   }
+
+  sealed trait Command
+
+  case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
+
+  sealed trait GetBoardStateReply
+
+  final case class BoardState(positions: Seq[Position], boardSize: Int, players: Set[String])
+      extends GetBoardStateReply
+
+  final case object BoardStateNotAvailable extends GetBoardStateReply
+
 }
-
-sealed trait Command
-
-case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
-
-sealed trait GetBoardStateReply
-
-final case class BoardState(positions: Seq[Position], boardSize: Int, players: Set[String])
-    extends GetBoardStateReply
-final case object BoardStateNotAvailable extends GetBoardStateReply
