@@ -9,6 +9,7 @@ lazy val `pugna` =
     .settings(settings)
     .settings(
       libraryDependencies ++= Seq(
+        library.playWS,
         library.akkaClusterSharding,
         library.akkaClusterTools,
         library.akkaDistributedData,
@@ -42,6 +43,7 @@ lazy val `pugna` =
 lazy val library =
   new {
     object Version {
+      val playWS                   = "1.1.3"
       val akka                     = "2.5.8"
       val akkaHttp                 = "10.0.11"
       val akkaHttpJson             = "1.18.1"
@@ -57,6 +59,8 @@ lazy val library =
       val scalaTest                = "3.0.4"
       val scalapb                  = com.trueaccord.scalapb.compiler.Version.scalapbVersion
     }
+    val playWS                   = "com.typesafe.play"        %% "play-ahc-ws-standalone"       % Version.playWS
+    val playWSJSON               = "com.typesafe.play"        %% "play-ws-standalone-json"      % Version.playWS
     val akkaClusterSharding      = "com.typesafe.akka"        %% "akka-cluster-sharding"        % Version.akka
     val akkaClusterTools         = "com.typesafe.akka"        %% "akka-cluster-tools"           % Version.akka
     val akkaDistributedData      = "com.typesafe.akka"        %% "akka-distributed-data"        % Version.akka

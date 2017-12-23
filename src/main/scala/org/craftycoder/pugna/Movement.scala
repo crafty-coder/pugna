@@ -16,4 +16,14 @@
 
 package org.craftycoder.pugna
 
-final case class Position(coordinate: Coordinate, playerName: String)
+sealed trait Movement
+case object UP    extends Movement
+case object DOWN  extends Movement
+case object LEFT  extends Movement
+case object RIGHT extends Movement
+
+case object UP_LEFT    extends Movement
+case object UP_RIGHT   extends Movement
+case object DOWN_LEFT  extends Movement
+case object DOWN_RIGHT extends Movement
+case object STAY       extends Movement

@@ -16,4 +16,4 @@
 
 package org.craftycoder.pugna
 
-final case class Position(coordinate: Coordinate, playerName: String)
+final case class Coordinate(x: Int, y: Int)

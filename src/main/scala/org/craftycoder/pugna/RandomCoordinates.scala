@@ -20,7 +20,7 @@ import scala.util.Random
 
 object RandomCoordinates {
 
-  def next(size: Int): Coordinates = Coordinates(
+  def next(size: Int): Coordinate = Coordinate(
     x = Random.nextInt(size),
     y = Random.nextInt(size)
   )

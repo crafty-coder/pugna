@@ -92,7 +92,9 @@ object Api extends Logging {
             onSuccess(game ? addPlayer(player)) {
               case DuplicatePlayer    => complete(Conflict)
               case GameAlreadyStarted => complete(Conflict)
-              case PlayerAdded(_)     => complete(Created)
+              case PlayerAdded(p) =>
+                logger.debug(s"Player $p added")
+                complete(Created)
             }
           }
         }
@@ -101,6 +103,7 @@ object Api extends Logging {
       path("start") {
         get {
           import Game._
+          logger.debug("Starting Game!")
           onSuccess(game ? startGame()) {
             case GameAlreadyStarted => complete(Conflict)
             case GameStarted        => complete(Created)

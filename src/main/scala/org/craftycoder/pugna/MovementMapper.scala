@@ -16,4 +16,21 @@
 
 package org.craftycoder.pugna
 
-final case class Coordinates(x: Int, y: Int)
+object MovementMapper {
+
+  def toMovement(text: String): Movement =
+    text.toUpperCase match {
+      case "UP"    => UP
+      case "DOWN"  => DOWN
+      case "LEFT"  => LEFT
+      case "RIGHT" => RIGHT
+
+      case "UP_LEFT"    => UP_LEFT
+      case "UP_RIGHT"   => UP_RIGHT
+      case "DOWN_LEFT"  => DOWN_LEFT
+      case "DOWN_RIGHT" => DOWN_RIGHT
+
+      case _ => STAY
+    }
+
+}

@@ -39,9 +39,9 @@ object Game extends Logging {
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
 
-  def apply(): Behavior[Command] = preparation(Set.empty)
+  def apply(playerGateway: PlayerGateway): Behavior[Command] = preparation(Set.empty, playerGateway)
 
-  private def preparation(players: Set[Player]): Behavior[Command] =
+  private def preparation(players: Set[Player], playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
       case (_, AddPlayer(player, replyTo)) =>
         if (players.exists(p => p.name == player.name || p.host == player.host)) {
@@ -49,7 +49,8 @@ object Game extends Logging {
           Actor.same
         } else {
           replyTo ! PlayerAdded(player)
-          preparation(players + player)
+          preparation(players + player, playerGateway)
+
         }
 
       case (_, GetPlayers(replyTo)) =>
@@ -57,9 +58,15 @@ object Game extends Logging {
         Actor.same
 
       case (ctx, StartGame(replyTo)) =>
-        val board: ActorRef[Board.Command] = createBoard(players, ctx)
+        val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
         replyTo ! GameStarted
-        gameStarted(board, players)
+        Actor.deferred { ctx =>
+          board ! Board.NewTurn
+          gameStarted(board, players)
+        }
+
+      case (ctx, TurnFinished) =>
+        Actor.same
 
       case (_, GetBoardPositions(replyTo)) =>
         replyTo ! BoardStateNotAvailable
@@ -68,11 +75,16 @@ object Game extends Logging {
     }
 
   protected def createBoard(players: Set[Player],
+                            playerGateway: PlayerGateway,
                             ctx: ActorContext[Game.Command]): ActorRef[Board.Command] =
-    ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER), Board.Name)
+    ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self), Board.Name)
 
   private def gameStarted(board: ActorRef[Board.Command], players: Set[Player]): Behavior[Command] =
     Actor.immutable {
+      case (ctx, TurnFinished) =>
+        //TODO check for winner
+        board ! Board.NewTurn
+        Actor.same
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)
         Actor.same
@@ -93,6 +105,7 @@ object Game extends Logging {
   final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])               extends Command
   final case class StartGame(replyTo: ActorRef[StartGameReply])                 extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply])     extends Command
+  final case object TurnFinished                                                extends Command
 
   sealed trait AddPlayerReply
   final case object DuplicatePlayer            extends AddPlayerReply

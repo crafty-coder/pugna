@@ -18,14 +18,21 @@ package org.craftycoder.pugna
 
 import akka.actor.{ Actor, ActorLogging, Terminated }
 import akka.stream.{ ActorMaterializer, Materializer }
+import play.api.libs.ws.WSClientConfig
+import play.api.libs.ws.ahc._
+import scala.concurrent.duration._
+import scala.languageFeature.postfixOps
 
 final class RootActor(config: Config) extends Actor with ActorLogging {
 
   import akka.typed.scaladsl.adapter._
 
+  private implicit val ec                = context.system.dispatcher
   private implicit val mat: Materializer = ActorMaterializer()
 
-  private val game = context.spawn(Game(), Game.Name)
+  private val playerGateway = new PlayerGateway(createWsClient())
+
+  private val game = context.spawn(Game(playerGateway), Game.Name)
 
   private val api = {
     import config.api._
@@ -40,6 +47,16 @@ final class RootActor(config: Config) extends Actor with ActorLogging {
     case Terminated(actor) =>
       log.error(s"Shutting down, because actor ${actor.path} terminated!")
       context.system.terminate()
+  }
+
+  private def createWsClient() = {
+    val config = AhcWSClientConfig(
+      wsClientConfig = WSClientConfig(
+        connectionTimeout = 2 seconds,
+        requestTimeout = 2 seconds
+      )
+    )
+    StandaloneAhcWSClient(config)
   }
 
 }
