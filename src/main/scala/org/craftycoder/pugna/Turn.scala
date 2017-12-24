@@ -20,7 +20,7 @@ import akka.typed.scaladsl.Actor
 import akka.pattern.pipe
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Board.{ BoardState, InvalidMove, MoveExecuted, MoveReply }
+import org.craftycoder.pugna.Board.{ BoardState, InvalidMove, MoveAplied, MoveReply }
 
 import scala.util.{ Failure, Success }
 
@@ -34,8 +34,8 @@ object Turn extends Logging {
             board: ActorRef[Board.Command]): Behavior[Turn.Command] =
     Actor.deferred { ctx =>
       val boardAdapter: ActorRef[MoveReply] = ctx.spawnAdapter {
-        case MoveExecuted(s) => FinishSuccessfulMove(s)
-        case InvalidMove     => FinishUnsuccessfulMove
+        case MoveAplied(s) => FinishSuccessfulMove(s)
+        case InvalidMove   => FinishUnsuccessfulMove
       }
       logger.debug("Turn Created")
       ctx.self ! NextMove
@@ -56,9 +56,9 @@ object Turn extends Logging {
         getPlayerFromPosition(players, positionToMove).foreach { player =>
           playerGateway.playerNextMovement(player, state, positionToMove.coordinate).andThen {
             case Success(movement) ⇒
-              board ! Board.Move(positionToMove.coordinate, movement, boardAdapter)
+              board ! Board.Move(positionToMove, movement, boardAdapter)
             case Failure(f) ⇒
-              board ! Board.Move(positionToMove.coordinate, STAY, boardAdapter)
+              board ! Board.Move(positionToMove, STAY, boardAdapter)
           }
         }
         turnInProgress(state,

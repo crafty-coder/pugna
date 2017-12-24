@@ -49,11 +49,19 @@ object Board extends Logging {
       case (_, GetBoardState(replyTo)) =>
         replyTo ! state
         Actor.same
-      case (_, Move(coordinate, movement, replyTo)) =>
-        //TODO Apply movement
-        logger.debug(s"Applying movement: $coordinate -> $movement")
-        replyTo ! InvalidMove
-        Actor.same
+      case (_, Move(position, movement, replyTo)) =>
+        logger.debug(s"Applying movement: $position -> $movement")
+        applyMovement(position, movement, state) match {
+          case Some(newState) =>
+            logger.debug(s"Movement Applied!")
+            replyTo ! MoveAplied(newState)
+            runningBoard(newState, turnNumber, players, playerGateway, game)
+          case None =>
+            logger.debug(s"Invalid Move!")
+            replyTo ! InvalidMove
+            Actor.same
+        }
+
       case (ctx, NewTurn) =>
         logger.debug(s"Turn Started")
         ctx.spawn(Turn(state, players, playerGateway, ctx.self), s"${Turn.Name}-$turnNumber")
@@ -64,6 +72,61 @@ object Board extends Logging {
         runningBoard(state, turnNumber + 1, players, playerGateway, game)
 
     }
+
+  private def applyMovement(position: Position,
+                            movement: Movement,
+                            boardState: BoardState): Option[BoardState] =
+    calculateTargetCoordinates(position.coordinate, movement, boardState.boardSize) match {
+      case Some(targetCoordinates) =>
+        val targetPosition = boardState.positions.find(p => p.coordinate == targetCoordinates)
+        targetPosition match {
+          case None =>
+            logger.debug(s"Moved to $targetCoordinates")
+            val newPositions = boardState.positions
+              .filterNot(_ == position) :+ Position(targetCoordinates, position.playerName)
+            Some(boardState.copy(positions = newPositions))
+          case Some(occupiedPosition) if occupiedPosition.playerName != position.playerName =>
+            logger.debug(s"Kill -> $occupiedPosition")
+            val newPositions = boardState.positions.filterNot(_ == occupiedPosition)
+            Some(boardState.copy(positions = newPositions))
+          case _ =>
+            logger.debug(s"Stays")
+            Some(boardState)
+        }
+      case None => None
+    }
+
+  private def calculateTargetCoordinates(coordinate: Coordinate,
+                                         movement: Movement,
+                                         boardSize: Int): Option[Coordinate] = {
+    val newCoordinates = movement match {
+      case UP =>
+        coordinate.copy(y = coordinate.y + 1)
+      case UP_LEFT =>
+        coordinate.copy(x = coordinate.x - 1, y = coordinate.y + 1)
+      case UP_RIGHT =>
+        coordinate.copy(x = coordinate.x + 1, y = coordinate.y + 1)
+      case LEFT =>
+        coordinate.copy(x = coordinate.x - 1)
+      case RIGHT =>
+        coordinate.copy(x = coordinate.x + 1)
+      case DOWN =>
+        coordinate.copy(y = coordinate.y - 1)
+      case DOWN_LEFT =>
+        coordinate.copy(x = coordinate.x - 1, y = coordinate.y - 1)
+      case DOWN_RIGHT =>
+        coordinate.copy(x = coordinate.x + 1, y = coordinate.y - 1)
+      case STAY =>
+        coordinate
+
+    }
+
+    newCoordinates match {
+      case Coordinate(x, y) if x < 0 || y < 0                   => None
+      case Coordinate(x, y) if x >= boardSize || y >= boardSize => None
+      case validCoordinates                                     => Some(validCoordinates)
+    }
+  }
 
   private def calculateBoardState(
       occupiedCoordinates: Map[Coordinate, String],
@@ -101,7 +164,7 @@ object Board extends Logging {
 
   final case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
   final case object NewTurn                                             extends Command
-  final case class Move(coordinate: Coordinate, movement: Movement, replyTo: ActorRef[MoveReply])
+  final case class Move(position: Position, movement: Movement, replyTo: ActorRef[MoveReply])
       extends Command
   final case object TurnFinished extends Command
 
@@ -117,7 +180,7 @@ object Board extends Logging {
   final case object NewTurnExecuted
 
   sealed trait MoveReply
-  final case class MoveExecuted(newState: BoardState) extends MoveReply
-  final case object InvalidMove                       extends MoveReply
+  final case class MoveAplied(newState: BoardState) extends MoveReply
+  final case object InvalidMove                     extends MoveReply
 
 }
