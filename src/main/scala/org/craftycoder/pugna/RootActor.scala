@@ -52,6 +52,7 @@ final class RootActor(config: Config) extends Actor with ActorLogging {
   private def createWsClient() = {
     val config = AhcWSClientConfig(
       wsClientConfig = WSClientConfig(
+        //compressionEnabled = true,
         connectionTimeout = 2 seconds,
         requestTimeout = 2 seconds
       )

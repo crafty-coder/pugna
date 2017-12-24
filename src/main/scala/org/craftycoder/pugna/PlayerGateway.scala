@@ -38,14 +38,19 @@ class PlayerGateway(val wsClient: StandaloneAhcWSClient)(implicit ec: ExecutionC
 
     val query = toQuery(NextMovementRequest(boardState, coordinateToMove))
 
+    val url = s"${player.host}/nextmove"
+    logger.debug(s"--> $url")
     wsClient
-      .url(s"${player.host}/nextMovement")
+      .url(url)
+      .addHttpHeaders("Content-Type" -> "application/json")
       .post(InMemoryBody(ByteString.fromString(query)))
       .map {
         case response if response.status == StatusCodes.OK.intValue =>
-          MovementMapper.toMovement(response.body)
+          val body = response.body.replaceAll("\"", "")
+          logger.debug(s"Response Body: $body")
+          MovementMapper.toMovement(body)
         case response =>
-          logger.warn(s"Player ${player.name} failed to reply")
+          logger.warn(s"Player ${player.name} failed to reply -> ${response.status}")
           STAY
       }
       .recover {
