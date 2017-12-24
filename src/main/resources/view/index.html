@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pugna</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.2/css/bulma.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+
+    <script>
+
+        function reloadData() {
+            var jqxhr = $.get("/players")
+                .done(function (data) {
+
+                    var scoreRows = data.players.map(function (item) {
+                        return "<tr><td>" + item + "</td></tr>"
+                    });
+
+                    var scoresTable = $('#scores-table');
+                    if (scoreRows.length) {
+                        scoresTable.html(scoreRows);
+                    }
+
+                    console.log("refreshing data!");
+
+                })
+                .fail(function (error) {
+                    console.log("error " + error);
+                });
+        }
+
+        $(document).ready(function () {
+            setInterval(reloadData, 5000);
+            reloadData();
+        });
+
+    </script>
+
+</head>
+
+<body>
+
+<section class="hero is-primary">
+    <div class="hero-body">
+        <div class="container has-text-centered">
+            <h1 class="title">
+                Players
+            </h1>
+        </div>
+    </div>
+</section>
+
+<nav class="nav has-shadow">
+    <div class="container">
+        <div class="nav-left">
+            <a class="nav-item is-tab is-hidden-mobile is-active" href="index.html">Home</a>
+            <a class="nav-item is-tab is-hidden-mobile" href="register.html">Register</a>
+            <a class="nav-item is-tab is-hidden-mobile" href="board.html">Board</a>
+        </div>
+    </div>
+</nav>
+
+<br/>
+<div class="container">
+    <div class="columns is-mobile">
+
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Player</th>
+            </tr>
+            </thead>
+            <tbody id="scores-table">
+            <tr>
+                <td colspan="1">No player registered yet
+                </th>
+            </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</body>
+</html>

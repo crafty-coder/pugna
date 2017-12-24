@@ -83,7 +83,7 @@ object Api extends Logging {
         get {
           complete {
             import Game._
-            (game ? getPlayers()).mapTo[Players].map(_.players)
+            (game ? getPlayers()).mapTo[Players]
           }
         } ~
         post {
@@ -101,7 +101,7 @@ object Api extends Logging {
       }
     } ~ pathPrefix("game") {
       path("start") {
-        get {
+        put {
           import Game._
           logger.debug("Starting Game!")
           onSuccess(game ? startGame()) {
@@ -120,6 +120,10 @@ object Api extends Logging {
           }
         }
       }
+    } ~ pathEndOrSingleSlash {
+      getFromResource("view/index.html")
+    } ~ pathPrefix("") {
+      getFromResourceDirectory("view")
     }
 
   }

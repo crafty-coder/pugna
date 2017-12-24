@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pugna</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.2/css/bulma.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('#registerForm').submit(function (e) {
+
+                e.preventDefault();
+
+                const userToRegister = {
+                    name: $("[name='name']").val(),
+                    host: $("[name='baseUrl']").val()
+                };
+
+                $("#success-notification").addClass("is-hidden");
+                $("#error-notification").addClass("is-hidden");
+
+                $.ajax({
+                    method: "POST",
+                    url: "/players",
+                    data: JSON.stringify(userToRegister),
+                    contentType: 'application/json; charset=UTF-8',
+                    success: function () {
+                        $("#success-notification").removeClass("is-hidden");
+                        $("[name='name']").val("");
+                        $("[name='baseUrl']").val("");
+                    },
+                    error: function (error) {
+                        $("#error-notification").removeClass("is-hidden");
+                    }
+                });
+            });
+        });
+
+    </script>
+
+</head>
+<body>
+
+
+<section class="hero is-primary">
+    <div class="hero-body">
+        <div class="container has-text-centered">
+            <h1 class="title">
+                Register to Pugna
+            </h1>
+        </div>
+    </div>
+</section>
+
+<nav class="nav has-shadow">
+    <div class="container">
+        <div class="nav-left">
+            <a class="nav-item is-tab is-hidden-mobile" href="index.html">Home</a>
+            <a class="nav-item is-tab is-hidden-mobile is-active" href="register.html">Register</a>
+            <a class="nav-item is-tab is-hidden-mobile" href="board.html">Board</a>
+        </div>
+    </div>
+</nav>
+
+<br/>
+<div class="container">
+    <form id="registerForm" method="post" action="/register">
+
+        <div id="success-notification" class="notification is-success is-hidden">
+            Player successfully registered!. Go to our <a href="index.html">Player's Page</a>
+        </div>
+
+        <div id="error-notification" class="notification is-danger is-hidden">
+            Ops! There was an error during your registration. Try again.
+        </div>
+
+        <div class="columns is-mobile">
+
+            <div class="column is-half is-offset-one-quarter">
+                <div class="field">
+                    <label class="label">Player Name</label>
+                    <p class="control has-icons-left">
+                        <input class="input" type="text" name="name" required placeholder="Player Name">
+                        <span class="icon is-small is-left">
+                <i class="fa fa-user"></i>
+              </span>
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label class="label">URL</label>
+                    <p class="control has-icons-left has-icons-right">
+                        <input class="input" type="text" name="baseUrl" placeholder="http://123.123.123.123:8080"
+                               required>
+                    </p>
+                </div>
+
+                <div class="field is-grouped">
+                    <p class="control">
+                        <button id="registerButton" class="button is-primary">Register</button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+<br/>
+
+</body>
+</html>

@@ -20,12 +20,13 @@ import akka.typed.scaladsl.{ Actor, ActorContext }
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board._
+import scala.concurrent.duration._
 
 object Game extends Logging {
 
   val Name                = "game"
-  val BOARD_SIZE          = 50
-  val NUM_SOLDIERS_PLAYER = 10
+  val BOARD_SIZE          = 100
+  val NUM_SOLDIERS_PLAYER = 40
 
   def addPlayer(player: Player)(replyTo: ActorRef[AddPlayerReply]): AddPlayer =
     AddPlayer(player, replyTo)
@@ -83,7 +84,7 @@ object Game extends Logging {
     Actor.immutable {
       case (ctx, TurnFinished) =>
         //TODO check for winner
-        board ! Board.NewTurn
+        ctx.schedule(500.millis, board, Board.NewTurn)
         Actor.same
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)

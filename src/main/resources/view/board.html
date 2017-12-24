@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pugna</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.2/css/bulma.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+
+    <script>
+
+        function toColor(str) {
+            var hash = 0;
+            for (var i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            var colour = '#';
+            for (var i = 0; i < 3; i++) {
+                var value = (hash >> (i * 8)) & 0xFF;
+                colour += ('00' + value.toString(16)).substr(-2);
+            }
+            return colour;
+        }
+
+        function drawBoard(boardSize, players, positions) {
+            var c = document.getElementById("boardCanvas");
+            var ctx = c.getContext("2d");
+
+            ctx.clearRect(0, 0, c.width, c.height);
+            const squareSize = c.height / boardSize;
+
+            var scores = players.map(function (v) {
+                return {name: v, points: 0};
+            });
+
+            positions.forEach(function (position) {
+
+                scores = scores.map(function (score) {
+                    if (score.name === position.playerName) {
+                        score.points++;
+                        return score;
+                    }
+                    else return score;
+                });
+
+                ctx.fillStyle = 'rgb(200, 0, 0)';
+                ctx.fillStyle = toColor(position.playerName);
+                ctx.fillRect(squareSize * position.coordinate.x + (squareSize * 0.05), squareSize * position.coordinate.y + (squareSize * 0.05), squareSize * 0.9, squareSize * 0.9);
+            });
+
+
+            var scoreRows = scores.map(function (item) {
+                return "<tr><td bgcolor='" + toColor(item.name) + "'>" + item.name + "</td><td>" + item.points + "</td></tr>"
+            });
+
+            var scoresTable = $('#scores-table');
+            if (scoreRows.length) {
+                scoresTable.html(scoreRows);
+            }
+        }
+
+        function resize() {
+            console.log("Resize!");
+            $("#boardCanvas").width($("#boardContainer").width());
+            $("#boardCanvas").height($("#boardCanvas").outerWidth());
+        }
+
+        function reloadData() {
+            var jqxhr = $.get("/board")
+                .done(function (data) {
+
+                    drawBoard(data.boardSize, data.players, data.positions);
+
+                    console.log("refreshing data!");
+
+                })
+                .fail(function (error) {
+                    console.log("error " + error);
+                });
+        }
+
+        $(document).ready(function () {
+            setInterval(reloadData, 100);
+            reloadData();
+            resize();
+            $(window).on("resize", function () {
+                resize();
+            });
+
+        });
+
+    </script>
+
+</head>
+
+<body>
+
+<section class="hero is-primary">
+    <div class="hero-body">
+        <div class="container has-text-centered">
+            <h1 class="title">
+                Ranking
+            </h1>
+        </div>
+    </div>
+</section>
+
+<nav class="nav has-shadow">
+    <div class="container">
+        <div class="nav-left">
+            <a class="nav-item is-tab is-hidden-mobile " href="index.html">Home</a>
+            <a class="nav-item is-tab is-hidden-mobile" href="register.html">Register</a>
+            <a class="nav-item is-tab is-hidden-mobile is-active" href="board.html">Board</a>
+        </div>
+    </div>
+</nav>
+
+<br/>
+<div class="container">
+    <div class="columns is-mobile">
+
+        <div id="boardContainer" class="column is-8 is-offset-1">
+            <canvas id="boardCanvas" width="1000" height="1000" style="border:1px solid #000000;"></canvas>
+        </div>
+        <div id="stats" class="column is-2">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Player</th>
+                    <th><abbr title="Points">Points</abbr></th>
+                </tr>
+                </thead>
+                <tbody id="scores-table">
+                <tr>
+                    <td colspan="2">No player registered yet</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>
