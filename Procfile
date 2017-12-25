@@ -1,0 +1,1 @@
+target/universal/stage/bin/pugna -Dpugna.api.port=${PORT}
