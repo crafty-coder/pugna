@@ -20,9 +20,25 @@ import scala.util.Random
 
 object RandomCoordinates {
 
-  def next(size: Int): Coordinate = Coordinate(
-    x = Random.nextInt(size),
-    y = Random.nextInt(size)
-  )
+  val DISPERSION = 15
+
+  def nextInQuadrant(quadrant: Int, size: Int): Coordinate = {
+    val dispersionX = Random.nextInt(DISPERSION * 2) - DISPERSION
+    val dispersionY = Random.nextInt(DISPERSION * 2) - DISPERSION
+    val center      = calculateQuadrantCenter(quadrant, size)
+    center.copy(
+      x = center.x + dispersionX,
+      y = center.y + dispersionY
+    )
+  }
+
+  private def calculateQuadrantCenter(quadrant: Int, boardSize: Int): Coordinate = {
+
+    val boardCenter = boardSize / 2
+    val radius      = boardCenter
+    val x           = (boardCenter + radius * Math.cos(Math.PI / 4 + Math.PI / 2 * quadrant)).toInt
+    val y           = (boardCenter + radius * Math.sin(Math.PI / 4 + Math.PI / 2 * quadrant)).toInt
+    Coordinate(x, y)
+  }
 
 }

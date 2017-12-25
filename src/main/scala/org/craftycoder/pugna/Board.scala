@@ -146,15 +146,16 @@ object Board extends Logging {
 
     val positions: mutable.Map[Coordinate, String] = mutable.HashMap.empty
     for {
-      i      <- 0 until numOfSoldiers
-      player <- players
+      i               <- 0 until numOfSoldiers
+      (player, index) <- players zipWithIndex
     } yield {
-      var position = RandomCoordinates.next(boardSize)
-      while (positions.contains(position)) {
-        position = RandomCoordinates.next(boardSize)
+      var coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
+      logger.debug(s"Coordinate central player $index is $coordinate")
+      while (positions.contains(coordinate)) {
+        coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
       }
 
-      positions += ((position, player.name))
+      positions += ((coordinate, player.name))
 
     }
     positions.toMap
