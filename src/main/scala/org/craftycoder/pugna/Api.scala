@@ -90,6 +90,7 @@ object Api extends Logging {
           entity(as[Player]) { player =>
             import Game._
             onSuccess(game ? addPlayer(player)) {
+              case UnReachablePlayer  => complete(BadGateway)
               case DuplicatePlayer    => complete(Conflict)
               case TooManyPlayers     => complete(Conflict)
               case GameAlreadyStarted => complete(Conflict)

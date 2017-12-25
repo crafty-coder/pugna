@@ -29,7 +29,7 @@ import play.api.libs.ws.ahc._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.postfixOps
 
-class PlayerGateway(val wsClient: StandaloneAhcWSClient)(implicit ec: ExecutionContext)
+class PlayerGateway(private val wsClient: StandaloneAhcWSClient)(implicit ec: ExecutionContext)
     extends Logging {
 
   def playerNextMovement(player: Player,
@@ -62,6 +62,27 @@ class PlayerGateway(val wsClient: StandaloneAhcWSClient)(implicit ec: ExecutionC
 
   private def toQuery(request: NextMovementRequest): String =
     request.asJson.spaces2
+
+  def ping(player: Player): Future[Boolean] = {
+    val url = s"${player.host}/ping"
+    logger.debug(s"--> $url")
+    wsClient
+      .url(url)
+      .get()
+      .map {
+        case response if response.status == StatusCodes.OK.intValue =>
+          response.body.replaceAll("\"", "").toLowerCase() == "pong"
+        case response =>
+          logger.warn(
+            s"Player ${player.name} failed to reply -> ${response.status} ${response.body}"
+          )
+          false
+      }
+      .recover {
+        case t: Throwable => true
+      }
+
+  }
 
   private case class NextMovementRequest(boardState: BoardState, coordinateToMove: Coordinate)
 

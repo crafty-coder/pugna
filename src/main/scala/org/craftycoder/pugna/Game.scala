@@ -20,7 +20,9 @@ import akka.typed.scaladsl.{ Actor, ActorContext }
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board._
+
 import scala.concurrent.duration._
+import scala.util.Success
 
 object Game extends Logging {
 
@@ -44,16 +46,30 @@ object Game extends Logging {
 
   private def preparation(players: Set[Player], playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
-      case (_, AddPlayer(player, replyTo)) =>
-        if (players.exists(p => p.name == player.name || p.host == player.host)) {
-          replyTo ! DuplicatePlayer
-          Actor.same
-        } else if (players.size > 3) {
+
+      case (ctx, AddReachablePlayer(player, replyTo)) =>
+        if (players.size > 3) {
           replyTo ! TooManyPlayers
           Actor.same
         } else {
           replyTo ! PlayerAdded(player)
           preparation(players + player, playerGateway)
+        }
+
+      case (ctx, AddPlayer(player, replyTo)) =>
+        if (players.exists(p => p.name == player.name || p.host == player.host)) {
+          replyTo ! DuplicatePlayer
+          Actor.same
+        } else {
+          implicit val ec = ctx.executionContext
+          playerGateway
+            .ping(player)
+            .andThen({
+              case Success(true) => ctx.self ! AddReachablePlayer(player, replyTo)
+              case _             => replyTo ! UnReachablePlayer
+            })
+
+          Actor.same
 
         }
 
@@ -103,6 +119,9 @@ object Game extends Logging {
       case (_, AddPlayer(_, replyTo)) =>
         replyTo ! GameAlreadyStarted
         Actor.same
+      case (_, AddReachablePlayer(_, replyTo)) =>
+        replyTo ! GameAlreadyStarted
+        Actor.same
       case (_, StartGame(replyTo)) =>
         replyTo ! GameAlreadyStarted
         Actor.same
@@ -111,12 +130,15 @@ object Game extends Logging {
   sealed trait Command
 
   final case class AddPlayer(player: Player, replyTo: ActorRef[AddPlayerReply]) extends Command
-  final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])               extends Command
-  final case class StartGame(replyTo: ActorRef[StartGameReply])                 extends Command
-  final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply])     extends Command
-  final case object TurnFinished                                                extends Command
+  private final case class AddReachablePlayer(player: Player, replyTo: ActorRef[AddPlayerReply])
+      extends Command
+  final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])           extends Command
+  final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
+  final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
+  final case object TurnFinished                                            extends Command
 
   sealed trait AddPlayerReply
+  final case object UnReachablePlayer          extends AddPlayerReply
   final case object DuplicatePlayer            extends AddPlayerReply
   final case object TooManyPlayers             extends AddPlayerReply
   final case object GameAlreadyStarted         extends AddPlayerReply with StartGameReply
