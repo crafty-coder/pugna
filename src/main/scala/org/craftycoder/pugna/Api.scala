@@ -91,6 +91,7 @@ object Api extends Logging {
             import Game._
             onSuccess(game ? addPlayer(player)) {
               case DuplicatePlayer    => complete(Conflict)
+              case TooManyPlayers     => complete(Conflict)
               case GameAlreadyStarted => complete(Conflict)
               case PlayerAdded(p) =>
                 logger.debug(s"Player $p added")

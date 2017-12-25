@@ -48,6 +48,9 @@ object Game extends Logging {
         if (players.exists(p => p.name == player.name || p.host == player.host)) {
           replyTo ! DuplicatePlayer
           Actor.same
+        } else if (players.size > 3) {
+          replyTo ! TooManyPlayers
+          Actor.same
         } else {
           replyTo ! PlayerAdded(player)
           preparation(players + player, playerGateway)
@@ -115,6 +118,7 @@ object Game extends Logging {
 
   sealed trait AddPlayerReply
   final case object DuplicatePlayer            extends AddPlayerReply
+  final case object TooManyPlayers             extends AddPlayerReply
   final case object GameAlreadyStarted         extends AddPlayerReply with StartGameReply
   final case class PlayerAdded(player: Player) extends AddPlayerReply
 
