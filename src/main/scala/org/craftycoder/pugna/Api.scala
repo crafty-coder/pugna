@@ -106,6 +106,7 @@ object Api extends Logging {
           logger.debug("Starting Game!")
           onSuccess(game ? startGame()) {
             case GameAlreadyStarted => complete(Conflict)
+            case TooFewPlayers      => complete(Conflict)
             case GameStarted        => complete(Created)
           }
         }

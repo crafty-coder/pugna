@@ -59,11 +59,16 @@ object Game extends Logging {
         Actor.same
 
       case (ctx, StartGame(replyTo)) =>
-        val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
-        replyTo ! GameStarted
-        Actor.deferred { ctx =>
-          board ! Board.NewTurn
-          gameStarted(board, players)
+        if (players.size < 2) {
+          replyTo ! TooFewPlayers
+          Actor.same
+        } else {
+          val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
+          replyTo ! GameStarted
+          Actor.deferred { ctx =>
+            board ! Board.NewTurn
+            gameStarted(board, players)
+          }
         }
 
       case (ctx, TurnFinished) =>
@@ -117,6 +122,7 @@ object Game extends Logging {
   final case class Players(players: Set[String]) extends GetPlayersReply
 
   sealed trait StartGameReply
-  final case object GameStarted extends StartGameReply
+  final case object GameStarted   extends StartGameReply
+  final case object TooFewPlayers extends StartGameReply
 
 }
