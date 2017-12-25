@@ -39,7 +39,8 @@ object Turn extends Logging {
       }
       logger.debug("Turn Created")
       ctx.self ! NextMove
-      turnInProgress(state, players, state.positions, playerGateway, boardAdapter, board)
+      val shufflePositions = scala.util.Random.shuffle(state.positions)
+      turnInProgress(state, players, shufflePositions, playerGateway, boardAdapter, board)
     }
 
   private def turnInProgress(state: BoardState,
