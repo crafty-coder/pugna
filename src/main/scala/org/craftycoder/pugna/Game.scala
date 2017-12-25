@@ -39,6 +39,9 @@ object Game extends Logging {
   def startGame()(replyTo: ActorRef[StartGameReply]): StartGame =
     StartGame(replyTo)
 
+  def finishGame()(replyTo: ActorRef[GameFinishedReply]): FinishGame =
+    FinishGame(replyTo)
+
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
 
@@ -86,9 +89,12 @@ object Game extends Logging {
           replyTo ! GameStarted
           Actor.deferred { ctx =>
             board ! Board.NewTurn
-            gameStarted(board, players)
+            gameStarted(board, players, playerGateway)
           }
         }
+      case (_, FinishGame(replyTo)) =>
+        replyTo ! GameFinished
+        preparation(Set.empty, playerGateway)
 
       case (ctx, TurnFinished) =>
         Actor.same
@@ -104,7 +110,9 @@ object Game extends Logging {
                             ctx: ActorContext[Game.Command]): ActorRef[Board.Command] =
     ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self), Board.Name)
 
-  private def gameStarted(board: ActorRef[Board.Command], players: Set[Player]): Behavior[Command] =
+  private def gameStarted(board: ActorRef[Board.Command],
+                          players: Set[Player],
+                          playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
       case (ctx, TurnFinished) =>
         //TODO check for winner
@@ -125,6 +133,10 @@ object Game extends Logging {
       case (_, StartGame(replyTo)) =>
         replyTo ! GameAlreadyStarted
         Actor.same
+      case (ctx, FinishGame(replyTo)) =>
+        ctx.stop(board)
+        replyTo ! GameFinished
+        preparation(Set.empty, playerGateway)
     }
 
   sealed trait Command
@@ -134,6 +146,7 @@ object Game extends Logging {
       extends Command
   final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])           extends Command
   final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
+  final case class FinishGame(replyTo: ActorRef[GameFinishedReply])         extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
   final case object TurnFinished                                            extends Command
 
@@ -150,5 +163,8 @@ object Game extends Logging {
   sealed trait StartGameReply
   final case object GameStarted   extends StartGameReply
   final case object TooFewPlayers extends StartGameReply
+
+  sealed trait GameFinishedReply
+  final case object GameFinished extends GameFinishedReply
 
 }

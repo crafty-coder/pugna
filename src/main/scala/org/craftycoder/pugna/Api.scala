@@ -22,6 +22,7 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.server.Directives.put
 import akka.http.scaladsl.server.{ Directives, Route }
 import akka.stream.Materializer
 import akka.typed.scaladsl.Actor
@@ -110,6 +111,14 @@ object Api extends Logging {
             case GameAlreadyStarted => complete(Conflict)
             case TooFewPlayers      => complete(Conflict)
             case GameStarted        => complete(Created)
+          }
+        }
+      } ~ path("finish") {
+        put {
+          import Game._
+          logger.debug("Finish Game!")
+          onSuccess(game ? finishGame()) {
+            case GameFinished => complete(OK)
           }
         }
       }

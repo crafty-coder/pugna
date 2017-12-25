@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8">
     <title>Xs Kata</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -9,113 +9,91 @@
 
     <script>
 
-    function hiddeNotifications(){
-      $("#success-notification").removeClass("is-hidden");
-      $("#error-notification").removeClass("is-hidden");
-    }
+        function hiddeNotifications() {
+            $("#success-notification").removeClass("is-hidden");
+            $("#error-notification").removeClass("is-hidden");
+        }
 
-    function consoleAction(path, action){
+        function consoleAction(path, action) {
 
-      $("#success-notification").removeClass("is-hidden");
-      $("#error-notification").removeClass("is-hidden");
+            $("#success-notification").removeClass("is-hidden");
+            $("#error-notification").removeClass("is-hidden");
 
-      $.ajax( { url : path, method: "PUT" } )
-        .done(function(data) {
-         $("#success-notification").html();
-       })
-       .fail(function(error) {
-         console.log("Fail to start game!");
-      });
+            $.ajax({url: path, method: "PUT"})
+                .done(function (data) {
+                    $("#success-notification").html();
+                })
+                .fail(function (error) {
+                    console.log("Fail to start game!");
+                });
 
 
-      $("#success-notification").addClass("is-hidden");
-      $("#error-notification").addClass("is-hidden");
-    }
+            $("#success-notification").addClass("is-hidden");
+            $("#error-notification").addClass("is-hidden");
+        }
 
-    $(document).ready(function(){
+        $(document).ready(function () {
 
-      $('#success-notification').html("Paused!");
+            $('#success-notification').html("Paused!");
 
-      $( "#start" ).click(function() {
-        $.ajax( { url : "/game/start", method: "PUT" } )
-          .done(function(data) {
-           console.log("Start game!");
-         })
-         .fail(function(error) {
-           console.log("Fail to start game!");
+            $("#start").click(function () {
+                $.ajax({url: "/game/start", method: "PUT"})
+                    .done(function (data) {
+                        console.log("Start game!");
+                    })
+                    .fail(function (error) {
+                        console.log("Fail to start game!");
+                    });
+            });
+
+            $("#stop").click(function () {
+                $.ajax({url: "/game/finish", method: "PUT"})
+                    .done(function (data) {
+                        console.log("Game stopped!");
+                    })
+                    .fail(function (error) {
+                        console.log("Fail to stop the game!");
+                    });
+            });
+
         });
-      });
-
-      $( "#pause" ).click(function() {
-        $.ajax( { url : "/admin/pause", method: "PUT" } )
-          .done(function(data) {
-           console.log("Game paused!");
-         })
-         .fail(function(error) {
-           console.log("Fail to pause the game!");
-        });
-      });
-
-      $( "#resume" ).click(function() {
-        $.ajax( { url : "/admin/resume", method: "PUT" } )
-          .done(function(data) {
-           console.log("Game resumed!");
-         })
-         .fail(function(error) {
-           console.log("Fail to resume the game!");
-        });
-      });
-
-      $( "#stop" ).click(function() {
-        $.ajax( { url : "/admin/finish", method: "PUT" } )
-          .done(function(data) {
-           console.log("Game stopped!");
-         })
-         .fail(function(error) {
-           console.log("Fail to stop the game!");
-        });
-      });
-
-    });
 
     </script>
 
-  </head>
-  <body>
+</head>
+<body>
 
 
-    <section class="hero is-primary">
-      <div class="hero-body">
+<section class="hero is-primary">
+    <div class="hero-body">
         <div class="container has-text-centered">
-          <h1 class="title">
-            Game admin console
-          </h1>
+            <h1 class="title">
+                Game admin console
+            </h1>
         </div>
-      </div>
-    </section>
+    </div>
+</section>
 
-    <br/>
-    <div class="container">
+<br/>
+<div class="container">
 
-      <div id="success-notification" class="notification is-success is-hidden">
-      </div>
+    <div id="success-notification" class="notification is-success is-hidden">
+    </div>
 
-      <div id="error-notification" class="notification is-danger is-hidden">
-      </div>
+    <div id="error-notification" class="notification is-danger is-hidden">
+    </div>
 
-      <div class="columns is-mobile">
+    <div class="columns is-mobile">
 
         <div class="block">
-          <a id="start" class="button is-primary">Start</a>
-          <a id="pause" class="button is-warning">Pause</a>
-          <a id="resume" class="button is-info">Resume</a>
-          <a id="stop" class="button is-danger">Stop</a>
+            <a id="start" class="button is-primary">Start</a>
+            <a id="stop" class="button is-danger">Finish</a>
         </div>
 
-      </div>
-
     </div>
-    <br/>
 
-  </body>
+</div>
+<br/>
+
+</body>
 </html>
