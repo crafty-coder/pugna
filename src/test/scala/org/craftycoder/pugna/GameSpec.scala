@@ -29,7 +29,7 @@ class GameSpec extends WordSpec with Matchers {
 
       "result in a PlayerAdded response when adding first player Player" in {
 
-        val context = new EffectfulActorContext("add-player", Game(), 42, null)
+        val context = new EffectfulActorContext("add-player", Game(null), 42, null)
 
         val inbox = Inbox[AddPlayerReply]("add-player")
         context.run(AddPlayer(Player("name", "host"), inbox.ref))
@@ -39,7 +39,7 @@ class GameSpec extends WordSpec with Matchers {
 
       "result in a DuplicatePlayer response when adding two players with the same name" in {
 
-        val context = new EffectfulActorContext("add-player", Game(), 42, null)
+        val context = new EffectfulActorContext("add-player", Game(null), 42, null)
 
         val inbox = Inbox[AddPlayerReply]("add-player")
 
@@ -53,7 +53,7 @@ class GameSpec extends WordSpec with Matchers {
 
       "result in a DuplicatePlayer response when host is already taken" in {
 
-        val context = new EffectfulActorContext("add-player", Game(), 42, null)
+        val context = new EffectfulActorContext("add-player", Game(null), 42, null)
 
         val inbox = Inbox[AddPlayerReply]("add-player")
 
@@ -70,17 +70,17 @@ class GameSpec extends WordSpec with Matchers {
 
       "result in a Players empty when no players" in {
 
-        val context = new EffectfulActorContext("get-players", Game(), 42, null)
+        val context = new EffectfulActorContext("get-players", Game(null), 42, null)
 
         val inbox = Inbox[GetPlayersReply]("get-players")
         context.run(GetPlayers(inbox.ref))
-        inbox.receiveMsg() shouldBe Players(Set.empty)
+        inbox.receiveMsg() shouldBe Players(Seq.empty)
 
       }
 
       "result in a Players with all the players added" in {
 
-        val context = new EffectfulActorContext("get-players", Game(), 42, null)
+        val context = new EffectfulActorContext("get-players", Game(null), 42, null)
 
         val inbox1 = Inbox[AddPlayerReply]("add-player")
         context.run(AddPlayer(Player("name", "host"), inbox1.ref))
@@ -88,7 +88,7 @@ class GameSpec extends WordSpec with Matchers {
 
         val inbox2 = Inbox[GetPlayersReply]("get-players")
         context.run(GetPlayers(inbox2.ref))
-        inbox2.receiveMsg() shouldBe Players(Set("name"))
+        inbox2.receiveMsg() shouldBe Players(Seq("name"))
 
       }
 
@@ -97,7 +97,7 @@ class GameSpec extends WordSpec with Matchers {
     "Start" should {
 
       "result in GameStarted" in {
-        val context = new EffectfulActorContext("starting-game", Game(), 42, null)
+        val context = new EffectfulActorContext("starting-game", Game(null), 42, null)
 
         val inbox = Inbox[StartGameReply]("start-game")
         context.run(StartGame(inbox.ref))

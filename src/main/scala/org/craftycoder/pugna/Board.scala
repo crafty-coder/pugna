@@ -31,10 +31,10 @@ object Board extends Logging {
             playerGateway: PlayerGateway,
             game: ActorRef[Game.Command]): Behavior[Command] =
     Actor.deferred { _ =>
-      val occupiedCoordinates: Map[Coordinate, String] =
+      val occupiedPositions: Seq[Position] =
         assignInitialPositions(players, boardSize, numOfSoldiers)
 
-      val state = calculateBoardState(occupiedCoordinates, players, boardSize)
+      val state = calculateBoardState(occupiedPositions, players, boardSize)
       logger.debug("Board created and running")
       runningBoard(state, 0, players, playerGateway, game)
 
@@ -51,13 +51,14 @@ object Board extends Logging {
         Actor.same
       case (_, Move(position, movement, replyTo)) =>
         logger.debug(s"Applying movement: $position -> $movement")
-        applyMovement(position, movement, state) match {
+        val playerIndex = players.indexWhere(p => p.name == position.playerName)
+        applyMovement(position, movement, playerIndex, state) match {
           case Some(newState) =>
-            logger.debug(s"Movement Applied!")
+            logger.debug("Movement Applied!")
             replyTo ! MoveAplied(newState)
             runningBoard(newState, turnNumber, players, playerGateway, game)
           case None =>
-            logger.debug(s"Invalid Move!")
+            logger.debug("Invalid Move!")
             replyTo ! InvalidMove
             Actor.same
         }
@@ -75,10 +76,12 @@ object Board extends Logging {
 
   private def applyMovement(position: Position,
                             movement: Movement,
+                            playerIndex: Int,
                             boardState: BoardState): Option[BoardState] =
     calculateTargetCoordinates(position.coordinate, movement, boardState.boardSize) match {
       case Some(targetCoordinates) =>
-        val targetPosition = boardState.positions.find(p => p.coordinate == targetCoordinates)
+        val targetPosition: Option[Position] =
+          boardState.positions.find(p => p.coordinate == targetCoordinates)
         targetPosition match {
           case None =>
             logger.debug(s"Moved to $targetCoordinates")
@@ -86,8 +89,21 @@ object Board extends Logging {
               .filterNot(_ == position) :+ Position(targetCoordinates, position.playerName)
             Some(boardState.copy(positions = newPositions))
           case Some(occupiedPosition) if occupiedPosition.playerName != position.playerName =>
-            logger.debug(s"Kill -> $occupiedPosition")
-            val newPositions = boardState.positions.filterNot(_ == occupiedPosition)
+            logger.debug(s"Kill -> $occupiedPosition Positions=${boardState.positions.size}")
+
+            val positionsAfterKill: Seq[Position] =
+              boardState.positions.filterNot(p => p.coordinate == occupiedPosition.coordinate)
+            logger.debug(s"Positions after kill =${positionsAfterKill.size}")
+
+            val respawnCoordinate =
+              getFreeCoordinateForPlayer(playerIndex, boardState.boardSize, positionsAfterKill)
+            logger.debug(s"Respawn in -> $respawnCoordinate")
+            val newPositions: Seq[Position] = positionsAfterKill :+ Position(
+              respawnCoordinate,
+              position.playerName
+            )
+            logger.debug(s"Positions after respawn =${newPositions.size}")
+
             Some(boardState.copy(positions = newPositions))
           case _ =>
             logger.debug(s"Stays")
@@ -129,36 +145,40 @@ object Board extends Logging {
   }
 
   private def calculateBoardState(
-      occupiedCoordinates: Map[Coordinate, String],
+      occupiedPositions: Seq[Position],
       players: Seq[Player],
       boardSize: Int,
   ) = {
-    val positions = occupiedCoordinates
-      .map({ case (c, p) => Position(c, p) })
-      .toSeq
     val playerNames = players.map(_.name)
-    BoardState(positions, boardSize, playerNames)
+    BoardState(occupiedPositions, boardSize, playerNames)
   }
 
   private def assignInitialPositions(players: Seq[Player],
                                      boardSize: Int,
-                                     numOfSoldiers: Int): Map[Coordinate, String] = {
+                                     numOfSoldiers: Int): Seq[Position] = {
 
-    val positions: mutable.Map[Coordinate, String] = mutable.HashMap.empty
+    var positions = Seq.empty[Position]
     for {
       i               <- 0 until numOfSoldiers
-      (player, index) <- players zipWithIndex
+      (player, index) <- players.zipWithIndex
     } yield {
-      var coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
-      logger.debug(s"Coordinate central player $index is $coordinate")
-      while (positions.contains(coordinate)) {
-        coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
-      }
-
-      positions += ((coordinate, player.name))
+      var coordinate = getFreeCoordinateForPlayer(index, boardSize, positions)
+      positions = positions :+ Position(coordinate, player.name)
 
     }
-    positions.toMap
+    positions
+  }
+
+  private def getFreeCoordinateForPlayer(
+      index: Int,
+      boardSize: Int,
+      occupiedPositions: Seq[Position]
+  ): Coordinate = {
+    var coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
+    while (occupiedPositions.exists(p => p.coordinate == coordinate)) {
+      coordinate = RandomCoordinates.nextInQuadrant(index, boardSize)
+    }
+    coordinate
   }
 
   sealed trait Command

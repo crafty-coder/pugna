@@ -27,8 +27,8 @@ object RandomCoordinates {
     val dispersionY = Random.nextInt(DISPERSION * 2) - DISPERSION
     val center      = calculateQuadrantCenter(quadrant, size)
     center.copy(
-      x = center.x + dispersionX,
-      y = center.y + dispersionY
+      x = Math.max(Math.min(center.x + dispersionX, size - 1), 0),
+      y = Math.max(Math.min(center.y + dispersionY, size - 1), 0)
     )
   }
 

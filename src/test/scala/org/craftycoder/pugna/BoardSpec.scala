@@ -26,12 +26,13 @@ class BoardSpec extends WordSpec with Matchers {
 
     val player1 = Player("name1", "host1")
     val player2 = Player("name2", "host2")
-    val players = Set(player1, player2)
+    val players = Seq(player1, player2)
 
     "Is created" should {
       "fill itself with all the players" in {
 
-        val context = new EffectfulActorContext("create-board", Board(players, 10, 5), 42, null)
+        val context =
+          new EffectfulActorContext("create-board", Board(players, 10, 5, null, null), 42, null)
 
         val inbox = Inbox[GetBoardStateReply]("add-player")
         context.run(GetBoardState(inbox.ref))

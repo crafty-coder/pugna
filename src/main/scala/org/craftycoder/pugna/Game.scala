@@ -21,14 +21,13 @@ import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board._
 
-import scala.concurrent.duration._
 import scala.util.Success
 
 object Game extends Logging {
 
   val Name                = "game"
-  val BOARD_SIZE          = 100
-  val NUM_SOLDIERS_PLAYER = 40
+  val BOARD_SIZE          = 60
+  val NUM_SOLDIERS_PLAYER = 30
 
   def addPlayer(player: Player)(replyTo: ActorRef[AddPlayerReply]): AddPlayer =
     AddPlayer(player, replyTo)
@@ -60,7 +59,7 @@ object Game extends Logging {
         }
 
       case (ctx, AddPlayer(player, replyTo)) =>
-        if (players.exists(p => p.name == player.name || p.host == player.host)) {
+        if (players.exists(p => p.name == player.name)) {
           replyTo ! DuplicatePlayer
           Actor.same
         } else {
@@ -116,7 +115,7 @@ object Game extends Logging {
     Actor.immutable {
       case (ctx, TurnFinished) =>
         //TODO check for winner
-        ctx.schedule(500.millis, board, Board.NewTurn)
+        board ! Board.NewTurn
         Actor.same
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)
