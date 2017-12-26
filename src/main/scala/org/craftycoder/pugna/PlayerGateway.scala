@@ -79,7 +79,7 @@ class PlayerGateway(private val wsClient: StandaloneAhcWSClient)(implicit ec: Ex
           false
       }
       .recover {
-        case t: Throwable => true
+        case t: Throwable => false
       }
 
   }
