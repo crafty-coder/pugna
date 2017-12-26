@@ -29,7 +29,7 @@ object Turn extends Logging {
   val Name = "turn"
 
   def apply(state: BoardState,
-            players: Set[Player],
+            players: Seq[Player],
             playerGateway: PlayerGateway,
             board: ActorRef[Board.Command]): Behavior[Turn.Command] =
     Actor.deferred { ctx =>
@@ -44,7 +44,7 @@ object Turn extends Logging {
     }
 
   private def turnInProgress(state: BoardState,
-                             players: Set[Player],
+                             players: Seq[Player],
                              remainingPossitionsToMove: Seq[Position],
                              playerGateway: PlayerGateway,
                              boardAdapter: ActorRef[MoveReply],
@@ -91,7 +91,7 @@ object Turn extends Logging {
         }
     }
 
-  def getPlayerFromPosition(players: Set[Player], position: Position): Option[Player] =
+  def getPlayerFromPosition(players: Seq[Player], position: Position): Option[Player] =
     players.find(p => p.name == position.playerName)
 
   sealed trait Command

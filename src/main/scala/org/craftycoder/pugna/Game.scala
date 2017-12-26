@@ -45,9 +45,9 @@ object Game extends Logging {
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
 
-  def apply(playerGateway: PlayerGateway): Behavior[Command] = preparation(Set.empty, playerGateway)
+  def apply(playerGateway: PlayerGateway): Behavior[Command] = preparation(Seq.empty, playerGateway)
 
-  private def preparation(players: Set[Player], playerGateway: PlayerGateway): Behavior[Command] =
+  private def preparation(players: Seq[Player], playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
 
       case (ctx, AddReachablePlayer(player, replyTo)) =>
@@ -56,7 +56,7 @@ object Game extends Logging {
           Actor.same
         } else {
           replyTo ! PlayerAdded(player)
-          preparation(players + player, playerGateway)
+          preparation(players :+ player, playerGateway)
         }
 
       case (ctx, AddPlayer(player, replyTo)) =>
@@ -94,7 +94,7 @@ object Game extends Logging {
         }
       case (_, FinishGame(replyTo)) =>
         replyTo ! GameFinished
-        preparation(Set.empty, playerGateway)
+        preparation(Seq.empty, playerGateway)
 
       case (ctx, TurnFinished) =>
         Actor.same
@@ -105,13 +105,13 @@ object Game extends Logging {
 
     }
 
-  protected def createBoard(players: Set[Player],
+  protected def createBoard(players: Seq[Player],
                             playerGateway: PlayerGateway,
                             ctx: ActorContext[Game.Command]): ActorRef[Board.Command] =
     ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self), Board.Name)
 
   private def gameStarted(board: ActorRef[Board.Command],
-                          players: Set[Player],
+                          players: Seq[Player],
                           playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
       case (ctx, TurnFinished) =>
@@ -136,7 +136,7 @@ object Game extends Logging {
       case (ctx, FinishGame(replyTo)) =>
         ctx.stop(board)
         replyTo ! GameFinished
-        preparation(Set.empty, playerGateway)
+        preparation(Seq.empty, playerGateway)
     }
 
   sealed trait Command
@@ -158,7 +158,7 @@ object Game extends Logging {
   final case class PlayerAdded(player: Player) extends AddPlayerReply
 
   sealed trait GetPlayersReply
-  final case class Players(players: Set[String]) extends GetPlayersReply
+  final case class Players(players: Seq[String]) extends GetPlayersReply
 
   sealed trait StartGameReply
   final case object GameStarted   extends StartGameReply

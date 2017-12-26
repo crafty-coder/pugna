@@ -25,7 +25,7 @@ object Board extends Logging {
 
   val Name = "board"
 
-  def apply(players: Set[Player],
+  def apply(players: Seq[Player],
             boardSize: Int,
             numOfSoldiers: Int,
             playerGateway: PlayerGateway,
@@ -42,7 +42,7 @@ object Board extends Logging {
 
   private def runningBoard(state: BoardState,
                            turnNumber: Int,
-                           players: Set[Player],
+                           players: Seq[Player],
                            playerGateway: PlayerGateway,
                            game: ActorRef[Game.Command]): Behavior[Command] =
     Actor.immutable {
@@ -130,7 +130,7 @@ object Board extends Logging {
 
   private def calculateBoardState(
       occupiedCoordinates: Map[Coordinate, String],
-      players: Set[Player],
+      players: Seq[Player],
       boardSize: Int,
   ) = {
     val positions = occupiedCoordinates
@@ -140,7 +140,7 @@ object Board extends Logging {
     BoardState(positions, boardSize, playerNames)
   }
 
-  private def assignInitialPositions(players: Set[Player],
+  private def assignInitialPositions(players: Seq[Player],
                                      boardSize: Int,
                                      numOfSoldiers: Int): Map[Coordinate, String] = {
 
@@ -171,7 +171,7 @@ object Board extends Logging {
 
   sealed trait GetBoardStateReply
 
-  final case class BoardState(positions: Seq[Position], boardSize: Int, players: Set[String])
+  final case class BoardState(positions: Seq[Position], boardSize: Int, players: Seq[String])
       extends GetBoardStateReply
 
   final case object BoardStateNotAvailable extends GetBoardStateReply
