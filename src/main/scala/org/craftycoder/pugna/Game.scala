@@ -26,8 +26,8 @@ import scala.util.Success
 object Game extends Logging {
 
   val Name                = "game"
-  val BOARD_SIZE          = 60
-  val NUM_SOLDIERS_PLAYER = 30
+  val BOARD_SIZE          = 50
+  val NUM_SOLDIERS_PLAYER = 20
 
   def addPlayer(player: Player)(replyTo: ActorRef[AddPlayerReply]): AddPlayer =
     AddPlayer(player, replyTo)
