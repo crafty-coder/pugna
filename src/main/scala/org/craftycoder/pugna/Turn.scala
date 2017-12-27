@@ -54,7 +54,7 @@ object Turn extends Logging {
         implicit val ec    = ctx.executionContext
         val positionToMove = remainingPositionsToMove.head
         getPlayerFromPosition(players, positionToMove).foreach { player =>
-          playerGateway.playerNextMovement(player, state, positionToMove.coordinate).andThen {
+          playerGateway.playerNextMovement(player, state, positionToMove).andThen {
             case Success(movement) ⇒
               board ! Board.Move(positionToMove, movement, boardAdapter)
             case Failure(f) ⇒

@@ -26,4 +26,5 @@ case object UP_LEFT    extends Movement
 case object UP_RIGHT   extends Movement
 case object DOWN_LEFT  extends Movement
 case object DOWN_RIGHT extends Movement
-case object STAY       extends Movement
+
+case object STAY extends Movement
