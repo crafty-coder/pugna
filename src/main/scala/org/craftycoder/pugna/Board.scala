@@ -19,7 +19,6 @@ package org.craftycoder.pugna
 import akka.typed.scaladsl.Actor
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
-import scala.collection.mutable
 
 object Board extends Logging {
 
@@ -34,20 +33,19 @@ object Board extends Logging {
       val occupiedPositions: Seq[Position] =
         assignInitialPositions(players, boardSize, numOfSoldiers)
 
-      val state = calculateBoardState(occupiedPositions, players, boardSize)
+      val state = calculateBoardState(occupiedPositions, 0, boardSize, players)
       logger.debug("Board created and running")
-      runningBoard(state, 0, players, playerGateway, game)
+      runningBoard(state, players, playerGateway, game)
 
     }
 
   private def runningBoard(state: BoardState,
-                           turnNumber: Int,
                            players: Seq[Player],
                            playerGateway: PlayerGateway,
                            game: ActorRef[Game.Command]): Behavior[Command] =
     Actor.immutable {
       case (_, GetBoardState(replyTo)) =>
-        replyTo ! state
+        replyTo ! BoardStateReply(state)
         Actor.same
       case (_, Move(position, movement, replyTo)) =>
         logger.debug(s"Applying movement: $position -> $movement")
@@ -56,7 +54,7 @@ object Board extends Logging {
           case Some(newState) =>
             logger.debug("Movement Applied!")
             replyTo ! MoveAplied(newState)
-            runningBoard(newState, turnNumber, players, playerGateway, game)
+            runningBoard(newState, players, playerGateway, game)
           case None =>
             logger.debug("Invalid Move!")
             replyTo ! InvalidMove
@@ -64,13 +62,13 @@ object Board extends Logging {
         }
 
       case (ctx, NewTurn) =>
-        logger.debug(s"Turn Started")
-        ctx.spawn(Turn(state, players, playerGateway, ctx.self), s"${Turn.Name}-$turnNumber")
+        logger.debug("Turn Started")
+        ctx.spawn(Turn(state, players, playerGateway, ctx.self), s"${Turn.Name}-${state.turn}")
         Actor.same
       case (ctx, TurnFinished) =>
-        logger.debug(s"Turn Finished")
+        logger.debug("Turn Finished")
         game ! Game.TurnFinished
-        runningBoard(state, turnNumber + 1, players, playerGateway, game)
+        runningBoard(state.copy(turn = state.turn + 1), players, playerGateway, game)
 
     }
 
@@ -146,11 +144,12 @@ object Board extends Logging {
 
   private def calculateBoardState(
       occupiedPositions: Seq[Position],
-      players: Seq[Player],
+      turn: Int,
       boardSize: Int,
+      players: Seq[Player]
   ) = {
     val playerNames = players.map(_.name)
-    BoardState(occupiedPositions, boardSize, playerNames)
+    BoardState(occupiedPositions, boardSize, turn, playerNames)
   }
 
   private def assignInitialPositions(players: Seq[Player],
@@ -190,9 +189,7 @@ object Board extends Logging {
   final case object TurnFinished extends Command
 
   sealed trait GetBoardStateReply
-
-  final case class BoardState(positions: Seq[Position], boardSize: Int, players: Seq[String])
-      extends GetBoardStateReply
+  final case class BoardStateReply(state: BoardState) extends GetBoardStateReply
 
   final case object BoardStateNotAvailable extends GetBoardStateReply
 

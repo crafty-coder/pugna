@@ -17,10 +17,9 @@
 package org.craftycoder.pugna
 
 import akka.typed.scaladsl.Actor
-import akka.pattern.pipe
 import akka.typed.{ ActorRef, Behavior }
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Board.{ BoardState, InvalidMove, MoveAplied, MoveReply }
+import org.craftycoder.pugna.Board.{ InvalidMove, MoveAplied, MoveReply }
 
 import scala.util.{ Failure, Success }
 
@@ -45,7 +44,7 @@ object Turn extends Logging {
 
   private def turnInProgress(state: BoardState,
                              players: Seq[Player],
-                             remainingPossitionsToMove: Seq[Position],
+                             remainingPositionsToMove: Seq[Position],
                              playerGateway: PlayerGateway,
                              boardAdapter: ActorRef[MoveReply],
                              board: ActorRef[Board.Command]): Behavior[Turn.Command] =
@@ -53,7 +52,7 @@ object Turn extends Logging {
 
       case (ctx, NextMove) =>
         implicit val ec    = ctx.executionContext
-        val positionToMove = remainingPossitionsToMove.head
+        val positionToMove = remainingPositionsToMove.head
         getPlayerFromPosition(players, positionToMove).foreach { player =>
           playerGateway.playerNextMovement(player, state, positionToMove.coordinate).andThen {
             case Success(movement) ⇒
@@ -64,25 +63,25 @@ object Turn extends Logging {
         }
         turnInProgress(state,
                        players,
-                       remainingPossitionsToMove.tail,
+                       remainingPositionsToMove.tail,
                        playerGateway,
                        boardAdapter,
                        board)
       case (ctx, FinishSuccessfulMove(newState: BoardState)) =>
-        if (remainingPossitionsToMove.isEmpty) {
+        if (remainingPositionsToMove.isEmpty) {
           board ! Board.TurnFinished
           Actor.stopped
         } else {
           ctx.self ! NextMove
           turnInProgress(newState,
                          players,
-                         remainingPossitionsToMove,
+                         remainingPositionsToMove,
                          playerGateway,
                          boardAdapter,
                          board)
         }
       case (ctx, FinishUnsuccessfulMove) =>
-        if (remainingPossitionsToMove.isEmpty) {
+        if (remainingPositionsToMove.isEmpty) {
           board ! Board.TurnFinished
           Actor.stopped
         } else {

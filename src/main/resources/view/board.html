@@ -22,7 +22,7 @@
             return colour;
         }
 
-        function drawBoard(boardSize, players, positions) {
+        function drawBoard(boardSize, players, positions,turn) {
             var c = document.getElementById("boardCanvas");
             var ctx = c.getContext("2d");
 
@@ -53,10 +53,16 @@
                 return "<tr><td bgcolor='" + toColor(item.name) + "'>" + item.name + "</td><td>" + item.points + "</td></tr>"
             });
 
-            var scoresTable = $('#scores-table');
+            const scoresTable = $('#scores-table');
+
             if (scoreRows.length) {
                 scoresTable.html(scoreRows);
             }
+
+            if(!isNaN(turn)){
+                $('#turn').html(turn);
+            }
+
         }
 
         function resize() {
@@ -69,7 +75,7 @@
             var jqxhr = $.get("/board")
                 .done(function (data) {
 
-                    drawBoard(data.boardSize, data.players, data.positions);
+                    drawBoard(data.boardSize, data.players, data.positions, data.turn);
 
                     console.log("refreshing data!");
 
@@ -124,6 +130,12 @@
         </div>
         <div id="stats" class="column is-2">
             <table class="table">
+                <tr>
+                    <td>Turn</td>
+                    <td id="turn">0</td>
+                </tr>
+            </table>
+            <table class="table">
                 <thead>
                 <tr>
                     <th>Player</th>
@@ -139,6 +151,7 @@
         </div>
 
     </div>
+</div>
 
 </body>
 </html>

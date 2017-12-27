@@ -21,7 +21,6 @@ import akka.util.ByteString
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Board.BoardState
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.InMemoryBody
 import play.api.libs.ws.ahc._

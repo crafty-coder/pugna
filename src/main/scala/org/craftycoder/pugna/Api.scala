@@ -22,7 +22,6 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.server.Directives.put
 import akka.http.scaladsl.server.{ Directives, Route }
 import akka.stream.Materializer
 import akka.typed.scaladsl.Actor
@@ -31,7 +30,7 @@ import akka.typed.{ ActorRef, Behavior }
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Board.{ BoardState, BoardStateNotAvailable }
+import org.craftycoder.pugna.Board.{ BoardStateNotAvailable, BoardStateReply }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -127,8 +126,8 @@ object Api extends Logging {
         get {
           import Game._
           onSuccess(game ? getPositions()) {
-            case b @ BoardState(_, _, _) => complete(b)
-            case BoardStateNotAvailable  => complete(NotFound)
+            case BoardStateReply(b)     => complete(b)
+            case BoardStateNotAvailable => complete(NotFound)
           }
         }
       }
