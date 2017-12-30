@@ -5,6 +5,5 @@ addSbtPlugin("de.heikoseeberger" % "sbt-header"          % "4.0.0")
 addSbtPlugin("io.spray"          % "sbt-revolver"        % "0.9.1")
 
 libraryDependencies ++= Seq(
-  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.7",
-  "org.slf4j"              % "slf4j-nop"       % "1.7.25"
+  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.7"
 )
