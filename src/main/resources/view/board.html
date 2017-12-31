@@ -44,7 +44,7 @@
                 });
 
                 ctx.fillStyle = toColor(position.playerName);
-                ctx.fillRect(squareSize * position.coordinate.x + (squareSize * 0.05), squareSize * position.coordinate.y + (squareSize * 0.05), squareSize * 0.9, squareSize * 0.9);
+                ctx.fillRect(squareSize * position.coordinate.x + (squareSize * 0.05), squareSize * (boardSize - (position.coordinate.y +1)) + (squareSize * 0.05), squareSize * 0.9, squareSize * 0.9);
             });
 
 

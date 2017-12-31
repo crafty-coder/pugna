@@ -27,7 +27,7 @@ In order to register a player, the player should be able to respond **"pong"** t
 Once the game starts, the game will send **NextMovementRequest** to a POST request to ${player_host}**/nextmove**. The expected response is a movement is a string format (**"UP"** or **"DOWN"** ) . If not correct movement is returned, **STAY** will be used
 
 
-* Player example in Java/springboot -> https://github.com/crafty-coder/pugna-player-spring . Heroku -> https://pugna-player1.herokuapp.com/
-* Player example in Scala/akka -> https://github.com/crafty-coder/pugna-player-akka . Heroku -> https://pugna-player2.herokuapp.com/
+* Player example in Scala/akka -> https://github.com/crafty-coder/pugna-player-akka . Heroku -> https://pugna-player1.herokuapp.com/
+* Player example in Java/springboot -> https://github.com/crafty-coder/pugna-player-spring . Heroku -> https://pugna-player2.herokuapp.com/
 
 Game server hosted on heroku -> https://pugna.herokuapp.com/
