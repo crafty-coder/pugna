@@ -42,6 +42,9 @@ object Turn extends Logging {
       turnInProgress(state, players, shufflePositions, playerGateway, boardAdapter, board)
     }
 
+  def getPlayerFromPosition(players: Seq[Player], position: Position): Option[Player] =
+    players.find(p => p.name == position.playerName)
+
   private def turnInProgress(state: BoardState,
                              players: Seq[Player],
                              remainingPositionsToMove: Seq[Position],
@@ -68,14 +71,16 @@ object Turn extends Logging {
                        boardAdapter,
                        board)
       case (ctx, FinishSuccessfulMove(newState: BoardState)) =>
-        if (remainingPositionsToMove.isEmpty) {
+        val remainingPositionsToMoveAlive = remainingPositionsToMove.intersect(newState.positions)
+
+        if (remainingPositionsToMoveAlive.isEmpty) {
           board ! Board.TurnFinished
           Actor.stopped
         } else {
           ctx.self ! NextMove
           turnInProgress(newState,
                          players,
-                         remainingPositionsToMove,
+                         remainingPositionsToMoveAlive,
                          playerGateway,
                          boardAdapter,
                          board)
@@ -90,12 +95,12 @@ object Turn extends Logging {
         }
     }
 
-  def getPlayerFromPosition(players: Seq[Player], position: Position): Option[Player] =
-    players.find(p => p.name == position.playerName)
-
   sealed trait Command
-  private final case object NextMove                                  extends Command
+
   private final case class FinishSuccessfulMove(newState: BoardState) extends Command
-  private final case object FinishUnsuccessfulMove                    extends Command
+
+  private final case object NextMove extends Command
+
+  private final case object FinishUnsuccessfulMove extends Command
 
 }
