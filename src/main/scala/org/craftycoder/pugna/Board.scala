@@ -53,11 +53,11 @@ object Board extends Logging {
         applyMovement(position, movement, playerIndex, state) match {
           case Some(newState) =>
             logger.debug("Movement Applied!")
-            replyTo ! MoveAplied(newState)
+            replyTo ! MoveApplied(newState, position)
             runningBoard(newState, players, playerGateway, game)
           case None =>
             logger.debug("Invalid Move!")
-            replyTo ! InvalidMove
+            replyTo ! InvalidMove(position)
             Actor.same
         }
 
@@ -183,12 +183,16 @@ object Board extends Logging {
   sealed trait Command
 
   final case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
-  final case object NewTurn                                             extends Command
+
+  final case object NewTurn extends Command
+
   final case class Move(position: Position, movement: Movement, replyTo: ActorRef[MoveReply])
       extends Command
+
   final case object TurnFinished extends Command
 
   sealed trait GetBoardStateReply
+
   final case class BoardStateReply(state: BoardState) extends GetBoardStateReply
 
   final case object BoardStateNotAvailable extends GetBoardStateReply
@@ -198,7 +202,9 @@ object Board extends Logging {
   final case object NewTurnExecuted
 
   sealed trait MoveReply
-  final case class MoveAplied(newState: BoardState) extends MoveReply
-  final case object InvalidMove                     extends MoveReply
+
+  final case class MoveApplied(newState: BoardState, positionMoved: Position) extends MoveReply
+
+  final case class InvalidMove(positionNotMoved: Position) extends MoveReply
 
 }
