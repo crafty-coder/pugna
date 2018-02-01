@@ -53,6 +53,9 @@ object Game extends Logging {
         if (players.size > 3) {
           replyTo ! TooManyPlayers
           Actor.same
+        } else if (players.exists(p => p.name == player.name)) {
+          replyTo ! DuplicatePlayer
+          Actor.same
         } else {
           replyTo ! PlayerAdded(player)
           preparation(players :+ player, playerGateway)
