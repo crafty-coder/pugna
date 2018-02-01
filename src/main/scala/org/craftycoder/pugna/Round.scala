@@ -23,31 +23,31 @@ import org.craftycoder.pugna.Board.{ InvalidMove, MoveApplied, MoveReply }
 
 import scala.util.{ Failure, Success }
 
-object Turn extends Logging {
+object Round extends Logging {
 
-  val Name                      = "turn"
+  val Name                      = "round"
   val MAX_MOVEMENTS_IN_PARALLEL = 10
   val SAFE_DISTANCE_TO_PARALLEL = 5
 
   def apply(state: BoardState,
             players: Seq[Player],
             playerGateway: PlayerGateway,
-            board: ActorRef[Board.Command]): Behavior[Turn.Command] =
+            board: ActorRef[Board.Command]): Behavior[Round.Command] =
     Actor.deferred { ctx =>
       val boardAdapter: ActorRef[MoveReply] = ctx.spawnAdapter {
         case MoveApplied(s, positionMoved) => FinishSuccessfulMove(s, positionMoved)
         case InvalidMove(positionNotMoved) => FinishUnsuccessfulMove(positionNotMoved)
       }
-      logger.debug(s"Turn ${state.turn} Created")
+      logger.debug(s"Round ${state.round} Created")
       ctx.self ! NextMove
       val shufflePositions = scala.util.Random.shuffle(state.positions)
-      turnInProgress(state,
-                     players,
-                     shufflePositions,
-                     Set.empty,
-                     playerGateway,
-                     boardAdapter,
-                     board)
+      roundInProgress(state,
+                      players,
+                      shufflePositions,
+                      Set.empty,
+                      playerGateway,
+                      boardAdapter,
+                      board)
     }
 
   private def getPlayerFromPosition(players: Seq[Player], position: Position): Option[Player] =
@@ -78,13 +78,13 @@ object Turn extends Logging {
     Math.max(xDistance, yDistance)
   }
 
-  private def turnInProgress(state: BoardState,
-                             players: Seq[Player],
-                             remainingPositionsToMove: Seq[Position],
-                             positionsInMovement: Set[Position],
-                             playerGateway: PlayerGateway,
-                             boardAdapter: ActorRef[MoveReply],
-                             board: ActorRef[Board.Command]): Behavior[Turn.Command] =
+  private def roundInProgress(state: BoardState,
+                              players: Seq[Player],
+                              remainingPositionsToMove: Seq[Position],
+                              positionsInMovement: Set[Position],
+                              playerGateway: PlayerGateway,
+                              boardAdapter: ActorRef[MoveReply],
+                              board: ActorRef[Board.Command]): Behavior[Round.Command] =
     Actor.immutable {
 
       case (ctx, NextMove) =>
@@ -104,13 +104,13 @@ object Turn extends Logging {
           }
         }
 
-        turnInProgress(state,
-                       players,
-                       remainingPositionsToMove.tail,
-                       positionsToMoveInParallel,
-                       playerGateway,
-                       boardAdapter,
-                       board)
+        roundInProgress(state,
+                        players,
+                        remainingPositionsToMove diff positionsToMoveInParallel.toSeq,
+                        positionsToMoveInParallel,
+                        playerGateway,
+                        boardAdapter,
+                        board)
       case (ctx, FinishSuccessfulMove(newState, positionMoved)) =>
         val currentPositionsInMovement    = positionsInMovement - positionMoved
         val remainingPositionsToMoveAlive = remainingPositionsToMove.intersect(newState.positions)
@@ -118,27 +118,27 @@ object Turn extends Logging {
         if (currentPositionsInMovement.isEmpty) {
 
           if (remainingPositionsToMoveAlive.isEmpty) {
-            board ! Board.TurnFinished
+            board ! Board.RoundFinished
             Actor.stopped
           } else {
             ctx.self ! NextMove
-            turnInProgress(newState,
-                           players,
-                           remainingPositionsToMoveAlive,
-                           currentPositionsInMovement,
-                           playerGateway,
-                           boardAdapter,
-                           board)
+            roundInProgress(newState,
+                            players,
+                            remainingPositionsToMoveAlive,
+                            currentPositionsInMovement,
+                            playerGateway,
+                            boardAdapter,
+                            board)
           }
 
         } else {
-          turnInProgress(newState,
-                         players,
-                         remainingPositionsToMoveAlive,
-                         currentPositionsInMovement,
-                         playerGateway,
-                         boardAdapter,
-                         board)
+          roundInProgress(newState,
+                          players,
+                          remainingPositionsToMoveAlive,
+                          currentPositionsInMovement,
+                          playerGateway,
+                          boardAdapter,
+                          board)
         }
 
       case (ctx, FinishUnsuccessfulMove(positionNotMoved)) =>
@@ -146,26 +146,26 @@ object Turn extends Logging {
 
         if (currentPositionsInMovement.isEmpty) {
           if (remainingPositionsToMove.isEmpty) {
-            board ! Board.TurnFinished
+            board ! Board.RoundFinished
             Actor.stopped
           } else {
             ctx.self ! NextMove
-            turnInProgress(state,
-                           players,
-                           remainingPositionsToMove,
-                           currentPositionsInMovement,
-                           playerGateway,
-                           boardAdapter,
-                           board)
+            roundInProgress(state,
+                            players,
+                            remainingPositionsToMove,
+                            currentPositionsInMovement,
+                            playerGateway,
+                            boardAdapter,
+                            board)
           }
         } else {
-          turnInProgress(state,
-                         players,
-                         remainingPositionsToMove,
-                         currentPositionsInMovement,
-                         playerGateway,
-                         boardAdapter,
-                         board)
+          roundInProgress(state,
+                          players,
+                          remainingPositionsToMove,
+                          currentPositionsInMovement,
+                          playerGateway,
+                          boardAdapter,
+                          board)
         }
 
     }

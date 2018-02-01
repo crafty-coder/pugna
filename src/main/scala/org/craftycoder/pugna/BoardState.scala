@@ -16,4 +16,4 @@
 
 package org.craftycoder.pugna
 
-case class BoardState(positions: Seq[Position], boardSize: Int, turn: Int, players: Seq[String])
+case class BoardState(positions: Seq[Position], boardSize: Int, round: Int, players: Seq[String])

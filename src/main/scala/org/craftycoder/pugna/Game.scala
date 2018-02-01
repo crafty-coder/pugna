@@ -87,7 +87,7 @@ object Game extends Logging {
           val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
           replyTo ! GameStarted
           Actor.deferred { ctx =>
-            board ! Board.NewTurn
+            board ! Board.NewRound
             gameStarted(board, players, playerGateway)
           }
         }
@@ -95,7 +95,7 @@ object Game extends Logging {
         replyTo ! GameFinished
         preparation(Seq.empty, playerGateway)
 
-      case (ctx, TurnFinished) =>
+      case (ctx, RoundFinished) =>
         Actor.same
 
       case (_, GetBoardPositions(replyTo)) =>
@@ -113,9 +113,9 @@ object Game extends Logging {
                           players: Seq[Player],
                           playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
-      case (ctx, TurnFinished) =>
+      case (ctx, RoundFinished) =>
         //TODO check for winner
-        board ! Board.NewTurn
+        board ! Board.NewRound
         Actor.same
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)
@@ -147,7 +147,7 @@ object Game extends Logging {
   final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
   final case class FinishGame(replyTo: ActorRef[GameFinishedReply])         extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
-  final case object TurnFinished                                            extends Command
+  final case object RoundFinished                                           extends Command
 
   sealed trait AddPlayerReply
   final case object UnReachablePlayer          extends AddPlayerReply

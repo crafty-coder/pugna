@@ -56,19 +56,19 @@ object Board extends Logging {
             replyTo ! MoveApplied(newState, position)
             runningBoard(newState, players, playerGateway, game)
           case None =>
-            logger.debug("Invalid Move!")
+            logger.debug(s"Invalid Move($position, $movement)! state: $state")
             replyTo ! InvalidMove(position)
             Actor.same
         }
 
-      case (ctx, NewTurn) =>
-        logger.debug("Turn Started")
-        ctx.spawn(Turn(state, players, playerGateway, ctx.self), s"${Turn.Name}-${state.turn}")
+      case (ctx, NewRound) =>
+        logger.debug("Round Started")
+        ctx.spawn(Round(state, players, playerGateway, ctx.self), s"${Round.Name}-${state.round}")
         Actor.same
-      case (ctx, TurnFinished) =>
-        logger.debug("Turn Finished")
-        game ! Game.TurnFinished
-        runningBoard(state.copy(turn = state.turn + 1), players, playerGateway, game)
+      case (ctx, RoundFinished) =>
+        logger.debug("Round Finished")
+        game ! Game.RoundFinished
+        runningBoard(state.copy(round = state.round + 1), players, playerGateway, game)
 
     }
 
@@ -144,12 +144,12 @@ object Board extends Logging {
 
   private def calculateBoardState(
       occupiedPositions: Seq[Position],
-      turn: Int,
+      round: Int,
       boardSize: Int,
       players: Seq[Player]
   ) = {
     val playerNames = players.map(_.name)
-    BoardState(occupiedPositions, boardSize, turn, playerNames)
+    BoardState(occupiedPositions, boardSize, round, playerNames)
   }
 
   private def assignInitialPositions(players: Seq[Player],
@@ -184,12 +184,12 @@ object Board extends Logging {
 
   final case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
 
-  final case object NewTurn extends Command
+  final case object NewRound extends Command
 
   final case class Move(position: Position, movement: Movement, replyTo: ActorRef[MoveReply])
       extends Command
 
-  final case object TurnFinished extends Command
+  final case object RoundFinished extends Command
 
   sealed trait GetBoardStateReply
 
@@ -197,9 +197,9 @@ object Board extends Logging {
 
   final case object BoardStateNotAvailable extends GetBoardStateReply
 
-  sealed trait NewTurnReply
+  sealed trait NewRoundReply
 
-  final case object NewTurnExecuted
+  final case object NewRoundExecuted
 
   sealed trait MoveReply
 

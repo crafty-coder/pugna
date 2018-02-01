@@ -22,7 +22,7 @@
             return colour;
         }
 
-        function drawBoard(boardSize, players, positions,turn) {
+        function drawBoard(boardSize, players, positions,round) {
             var c = document.getElementById("boardCanvas");
             var ctx = c.getContext("2d");
 
@@ -58,8 +58,8 @@
                 scoresTable.html(scoreRows);
             }
 
-            if(!isNaN(turn)){
-                $('#turn').html(turn);
+            if(!isNaN(round)){
+                $('#round').html(round);
             }
 
         }
@@ -74,7 +74,7 @@
             var jqxhr = $.get("/board")
                 .done(function (data) {
 
-                    drawBoard(data.boardSize, data.players, data.positions, data.turn);
+                    drawBoard(data.boardSize, data.players, data.positions, data.round);
 
                     console.log("refreshing data!");
 
@@ -129,8 +129,8 @@
         <div id="stats" class="column is-2">
             <table class="table">
                 <tr>
-                    <td>Turn</td>
-                    <td id="turn">0</td>
+                    <td>Round</td>
+                    <td id="round">0</td>
                 </tr>
             </table>
             <table class="table">
