@@ -10,11 +10,11 @@
     <script>
 
         function reloadData() {
-            var jqxhr = $.get("/players")
+            var jqxhr = $.get("/games")
                 .done(function (data) {
 
-                    var scoreRows = data.players.map(function (item) {
-                        return "<tr><td>" + item + "</td></tr>"
+                    var scoreRows = data.games.map(function (item) {
+                        return "<tr><td><a href='?game="+ item +"'>" + item + "</a></td></tr>"
                     });
 
                     var scoresTable = $('#scores-table');
@@ -68,18 +68,18 @@
         <table class="table">
             <thead>
             <tr>
-                <th>Player</th>
+                <th>Games</th>
             </tr>
             </thead>
             <tbody id="scores-table">
             <tr>
-                <td colspan="1">No player registered yet
-                </th>
+                <td colspan="1">No games have been created yet.</td>
             </tr>
             </tbody>
         </table>
 
     </div>
+</div>
 
 </body>
 </html>
