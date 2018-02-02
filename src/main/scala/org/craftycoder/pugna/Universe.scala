@@ -26,6 +26,12 @@ object Universe extends Logging {
 
   val Name = "Universe"
 
+  def getGame(gameId: String)(replyTo: ActorRef[GetGameReply]): GetGame = GetGame(gameId, replyTo)
+
+  def getGames()(replyTo: ActorRef[GetGamesReply]): GetGames = GetGames(replyTo)
+
+  def createGame()(replyTo: ActorRef[GameCreatedReply]): CreateGame = CreateGame(replyTo)
+
   def apply(playerGateway: PlayerGateway): Behavior[Command] = running(playerGateway, 0, Map.empty)
 
   private def running(playerGateway: PlayerGateway,
@@ -34,15 +40,14 @@ object Universe extends Logging {
     Actor
       .immutable {
         case (ctx, CreateGame(replyTo)) =>
-          val gameId = s"${Game.Name}-$numberOfGames"
-
-          val gameSupervision              = supervise(Game(playerGateway)).onFailure[Exception](resume)
-          val game: ActorRef[Game.Command] = ctx.spawn(gameSupervision, gameId)
+          val gameSupervision = supervise(Game(playerGateway)).onFailure[Exception](resume)
+          val game: ActorRef[Game.Command] =
+            ctx.spawn(gameSupervision, s"${Game.Name}-$numberOfGames")
 
           ctx.watch(game)
-          replyTo ! GameAdded(gameId)
+          replyTo ! GameCreated(numberOfGames.toString)
 
-          running(playerGateway, numberOfGames + 1, games + (gameId -> game))
+          running(playerGateway, numberOfGames + 1, games + (numberOfGames.toString -> game))
 
         case (_, GetGames(replyTo)) =>
           replyTo ! Games(games.keys.toList)
@@ -56,22 +61,22 @@ object Universe extends Logging {
           Actor.same
 
       }
-      .onSignal({
-        case (_, Terminated(gameRef)) ⇒
-          running(playerGateway, numberOfGames, games.filterNot(game => game._2 == gameRef))
-      })
+//      .onSignal({
+//        case (_, Terminated(gameRef)) ⇒
+//          running(playerGateway, numberOfGames, games.filterNot(game => game._2 == gameRef))
+//      })
 
   sealed trait Command
 
-  final case class CreateGame(replyTo: ActorRef[AddGameReply]) extends Command
+  final case class CreateGame(replyTo: ActorRef[GameCreatedReply]) extends Command
 
   final case class GetGames(replyTo: ActorRef[GetGamesReply]) extends Command
 
   final case class GetGame(gameId: String, replyTo: ActorRef[GetGameReply]) extends Command
 
-  sealed trait AddGameReply
+  sealed trait GameCreatedReply
 
-  final case class GameAdded(id: String) extends AddGameReply
+  final case class GameCreated(id: String) extends GameCreatedReply
 
   sealed trait GetGamesReply
 

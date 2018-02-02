@@ -32,15 +32,15 @@ final class RootActor(config: Config) extends Actor with ActorLogging {
 
   private val playerGateway = new PlayerGateway(createWsClient())
 
-  private val game = context.spawn(Game(playerGateway), Game.Name)
+  private val universe = context.spawn(Universe(playerGateway), Universe.Name)
 
   private val api = {
     import config.api._
-    context.spawn(Api(address, port, game, askTimeout), Api.Name)
+    context.spawn(Api(address, port, universe, askTimeout), Api.Name)
   }
 
   context.watch(api)
-  context.watch(game)
+  context.watch(universe)
   log.info(s"${context.system.name} up and running")
 
   override def receive: Receive = {

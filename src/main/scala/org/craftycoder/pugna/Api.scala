@@ -31,6 +31,7 @@ import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board.{ BoardStateNotAvailable, BoardStateReply }
+import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, getGame }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -40,7 +41,10 @@ object Api extends Logging {
 
   final val Name = "api"
 
-  def apply(address: String, port: Int, game: ActorRef[Game.Command], askTimeout: FiniteDuration)(
+  def apply(address: String,
+            port: Int,
+            universe: ActorRef[Universe.Command],
+            askTimeout: FiniteDuration)(
       implicit mat: Materializer
   ): Behavior[Command] =
     Actor.deferred { context =>
@@ -51,7 +55,7 @@ object Api extends Logging {
       val self = context.self
       Http()
         .bindAndHandle(
-          route(game)(askTimeout, context.system.executionContext, context.system.scheduler),
+          route(universe)(askTimeout, context.system.executionContext, context.system.scheduler),
           address,
           port
         )
@@ -72,66 +76,102 @@ object Api extends Logging {
     }
 
   def route(
-      game: ActorRef[Game.Command]
+      universe: ActorRef[Universe.Command]
   )(implicit askTimeout: Timeout, ec: ExecutionContextExecutor, scheduler: Scheduler): Route = {
     import Directives._
     import ErrorAccumulatingCirceSupport._
     import io.circe.generic.auto._
 
-    path("players") {
+    path("games") {
+      get {
+        complete {
+          import Universe._
+          (universe ? getGames()).mapTo[Games]
+        }
+      } ~ post {
+        import Universe._
+        onSuccess(universe ? createGame()) {
+          case GameCreated(x) => complete(Created)
+        }
+      }
+    } ~ path("games" / Segment / "players") { gameId =>
       pathEndOrSingleSlash {
         get {
-          complete {
-            import Game._
-            (game ? getPlayers()).mapTo[Players]
+          import Universe._
+          onSuccess(universe ? getGame(gameId)) {
+            case GameNotFound =>
+              complete(NotFound)
+            case GameRef(game) =>
+              import Game._
+              complete {
+                (game ? getPlayers()).mapTo[Players]
+              }
           }
-        } ~
-        post {
+        } ~ post {
           entity(as[Player]) { player =>
-            import Game._
-            onSuccess(game ? addPlayer(player)) {
-              case UnReachablePlayer  => complete(BadGateway)
-              case DuplicatePlayer    => complete(Conflict)
-              case TooManyPlayers     => complete(Conflict)
-              case GameAlreadyStarted => complete(Conflict)
-              case PlayerAdded(p) =>
-                logger.debug(s"Player $p added")
-                complete(Created)
+            onSuccess(universe ? getGame(gameId)) {
+              case GameNotFound =>
+                complete(NotFound)
+              case GameRef(game) =>
+                import Game._
+                onSuccess(game ? addPlayer(player)) {
+                  case UnReachablePlayer  => complete(BadGateway)
+                  case DuplicatePlayer    => complete(Conflict)
+                  case TooManyPlayers     => complete(Conflict)
+                  case GameAlreadyStarted => complete(Conflict)
+                  case PlayerAdded(p) =>
+                    logger.debug(s"Player $p added")
+                    complete(Created)
+                }
             }
           }
         }
       }
-    } ~ pathPrefix("game") {
-      path("start") {
-        put {
-          import Game._
-          logger.debug("Starting Game!")
-          onSuccess(game ? startGame()) {
-            case GameAlreadyStarted => complete(Conflict)
-            case TooFewPlayers      => complete(Conflict)
-            case GameStarted        => complete(Created)
-          }
-        }
-      } ~ path("finish") {
-        put {
-          import Game._
-          logger.debug("Finish Game!")
-          onSuccess(game ? finishGame()) {
-            case GameFinished => complete(OK)
-          }
+    } ~ path("games" / Segment / "start") { gameId =>
+      put {
+        logger.debug("Starting Game!")
+        onSuccess(universe ? getGame(gameId)) {
+          case GameNotFound =>
+            complete(NotFound)
+          case GameRef(game) =>
+            import Game._
+            onSuccess(game ? startGame()) {
+              case GameAlreadyStarted => complete(Conflict)
+              case TooFewPlayers      => complete(Conflict)
+              case GameStarted        => complete(Created)
+            }
         }
       }
-    } ~ pathPrefix("board") {
+    } ~ path("games" / Segment / "finish") { gameId =>
+      put {
+        onSuccess(universe ? getGame(gameId)) {
+          case GameNotFound =>
+            complete(NotFound)
+          case GameRef(game) =>
+            import Game._
+            logger.debug("Finish Game!")
+            onSuccess(game ? finishGame()) {
+              case GameFinished => complete(OK)
+            }
+        }
+      }
+    } ~ path("games" / Segment / "board") { gameId =>
       pathEndOrSingleSlash {
         get {
-          import Game._
-          onSuccess(game ? getPositions()) {
-            case BoardStateReply(b)     => complete(b)
-            case BoardStateNotAvailable => complete(NotFound)
+          onSuccess(universe ? getGame(gameId)) {
+            case GameNotFound =>
+              complete(NotFound)
+            case GameRef(game) =>
+              import Game._
+              onSuccess(game ? getPositions()) {
+                case BoardStateReply(b)     => complete(b)
+                case BoardStateNotAvailable => complete(NotFound)
+              }
           }
         }
       }
-    } ~ pathEndOrSingleSlash {
+    } ~
+    pathEndOrSingleSlash {
       getFromResource("view/index.html")
     } ~ pathPrefix("") {
       getFromResourceDirectory("view")
