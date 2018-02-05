@@ -35,7 +35,7 @@
 
                     <div v-show="showSuccess" class="notification is-success">
                         <button class="delete" @click="showSuccess = false"></button>
-                        Player added successfully, you could go to <a href="index.html">index</a> or to <a href="game.html">game</a>
+                        Player added successfully, you could go to <a href="index.html">index</a> or to <a :href="'game.html?id='+ gameId">game</a>
                     </div>
 
                     <div v-show="showError" class="notification is-danger">
