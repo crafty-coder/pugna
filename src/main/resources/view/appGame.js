@@ -117,20 +117,18 @@ window.addEventListener('load', function () {
                     });
             }
             ,
-            finishGame() {
-                this.$http.put("/games/" + this.gameId + "/finish").then(
+            restartGame() {
+                this.$http.put("/games/" + this.gameId + "/restart").then(
                     () => {
-                        console.log(("Game Finished"))
+                        console.log(("Game Restarted"))
                     }, response => {
                         console.error("Fail to finish the game")
                     });
             }
-        }
-        ,
+        },
         mounted() {
             this.resize();
-        }
-        ,
+        },
         created() {
             this.loadPlayers();
             setInterval(

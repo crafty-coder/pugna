@@ -38,8 +38,8 @@ object Game extends Logging {
   def startGame()(replyTo: ActorRef[StartGameReply]): StartGame =
     StartGame(replyTo)
 
-  def finishGame()(replyTo: ActorRef[GameFinishedReply]): FinishGame =
-    FinishGame(replyTo)
+  def restartGame()(replyTo: ActorRef[GameRestartedReply]): RestartGame =
+    RestartGame(replyTo)
 
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
@@ -101,9 +101,9 @@ object Game extends Logging {
             gameStarted(id, name, board, players, playerGateway)
           }
         }
-      case (_, FinishGame(replyTo)) =>
-        replyTo ! GameFinished
-        preparation(id, name, Seq.empty, playerGateway)
+      case (_, RestartGame(replyTo)) =>
+        replyTo ! GameRestarted
+        preparation(id, name, players, playerGateway)
 
       case (ctx, RoundFinished) =>
         Actor.same
@@ -163,10 +163,10 @@ object Game extends Logging {
       case (_, StartGame(replyTo)) =>
         replyTo ! GameAlreadyStarted
         Actor.same
-      case (ctx, FinishGame(replyTo)) =>
+      case (ctx, RestartGame(replyTo)) =>
         ctx.stop(board)
-        replyTo ! GameFinished
-        preparation(id, name, Seq.empty, playerGateway)
+        replyTo ! GameRestarted
+        preparation(id, name, players, playerGateway)
     }
 
   sealed trait State
@@ -187,7 +187,7 @@ object Game extends Logging {
       extends Command
   final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])           extends Command
   final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
-  final case class FinishGame(replyTo: ActorRef[GameFinishedReply])         extends Command
+  final case class RestartGame(replyTo: ActorRef[GameRestartedReply])       extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
   final case class GetGameState(replyTo: ActorRef[GetGameStateReply])       extends Command
   final case object RoundFinished                                           extends Command
@@ -206,8 +206,8 @@ object Game extends Logging {
   final case object GameStarted   extends StartGameReply
   final case object TooFewPlayers extends StartGameReply
 
-  sealed trait GameFinishedReply
-  final case object GameFinished extends GameFinishedReply
+  sealed trait GameRestartedReply
+  final case object GameRestarted extends GameRestartedReply
 
   sealed trait GetGameStateReply
   final case class GameState(id: String,

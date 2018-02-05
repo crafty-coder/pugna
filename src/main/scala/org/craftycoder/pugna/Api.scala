@@ -31,6 +31,7 @@ import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board.{ BoardStateNotAvailable, BoardStateReply }
+import org.craftycoder.pugna.Game.logger
 import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, getGame }
 
 import scala.concurrent.ExecutionContextExecutor
@@ -142,16 +143,16 @@ object Api extends Logging {
             }
         }
       }
-    } ~ path("games" / Segment / "finish") { gameId =>
+    } ~ path("games" / Segment / "restart") { gameId =>
       put {
+        logger.debug("Restart Game!")
         onSuccess(universe ? getGame(gameId)) {
           case GameNotFound =>
             complete(NotFound)
           case GameRef(game) =>
             import Game._
-            logger.debug("Finish Game!")
-            onSuccess(game ? finishGame()) {
-              case GameFinished => complete(OK)
+            onSuccess(game ? restartGame()) {
+              case GameRestarted => complete(OK)
             }
         }
       }
