@@ -16,11 +16,19 @@
 
 package org.craftycoder.pugna
 
+import java.util.concurrent.TimeUnit
+
+import akka.actor.Scheduler
 import akka.typed.SupervisorStrategy.resume
 import akka.typed.scaladsl.Actor
 import akka.typed.scaladsl.Actor.supervise
+import akka.typed.scaladsl.AskPattern._
 import akka.typed.{ ActorRef, Behavior, Terminated }
+import akka.util.Timeout
 import org.apache.logging.log4j.scala.Logging
+import org.craftycoder.pugna.Game.GameState
+
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 object Universe extends Logging {
 
@@ -40,17 +48,29 @@ object Universe extends Logging {
     Actor
       .immutable {
         case (ctx, CreateGame(replyTo)) =>
-          val gameSupervision = supervise(Game(playerGateway)).onFailure[Exception](resume)
+          val gameId   = numberOfGames.toString
+          val gameName = s"${Game.Name}-$numberOfGames"
+          val gameSupervision =
+            supervise(Game(gameId, gameName, playerGateway)).onFailure[Exception](resume)
           val game: ActorRef[Game.Command] =
-            ctx.spawn(gameSupervision, s"${Game.Name}-$numberOfGames")
+            ctx.spawn(gameSupervision, gameName)
 
           ctx.watch(game)
           replyTo ! GameCreated(numberOfGames.toString)
 
-          running(playerGateway, numberOfGames + 1, games + (numberOfGames.toString -> game))
+          running(playerGateway, numberOfGames + 1, games + (gameId -> game))
 
-        case (_, GetGames(replyTo)) =>
-          replyTo ! Games(games.keys.toList)
+        case (ctx, GetGames(replyTo)) =>
+          implicit val i: Timeout                   = Timeout(100, TimeUnit.MILLISECONDS)
+          implicit val sc: Scheduler                = ctx.system.scheduler
+          implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
+          Future
+            .sequence(games.map({ case (_, ref) => ref ? Game.getGameState() }))
+            .map(_.map({ case g: GameState => g }).toList)
+            .foreach({ gameStates =>
+              replyTo ! Games(gameStates)
+            })
+
           Actor.same
 
         case (_, GetGame(gameId, replyTo)) =>
@@ -80,7 +100,7 @@ object Universe extends Logging {
 
   sealed trait GetGamesReply
 
-  final case class Games(games: List[String]) extends GetGamesReply
+  final case class Games(games: List[GameState]) extends GetGamesReply
 
   sealed trait GetGameReply
 

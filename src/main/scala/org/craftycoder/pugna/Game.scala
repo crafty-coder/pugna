@@ -44,12 +44,19 @@ object Game extends Logging {
   def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
     GetBoardPositions(replyTo)
 
-  def apply(playerGateway: PlayerGateway): Behavior[Command] = preparation(Seq.empty, playerGateway)
+  def getGameState()(replyTo: ActorRef[GetGameStateReply]): GetGameState =
+    GetGameState(replyTo)
 
-  private def preparation(players: Seq[Player], playerGateway: PlayerGateway): Behavior[Command] =
+  def apply(id: String, name: String, playerGateway: PlayerGateway): Behavior[Command] =
+    preparation(id, name, Seq.empty, playerGateway)
+
+  private def preparation(id: String,
+                          name: String,
+                          players: Seq[Player],
+                          playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
 
-      case (ctx, AddReachablePlayer(player, replyTo)) =>
+      case (_, AddReachablePlayer(player, replyTo)) =>
         if (players.size > 3) {
           replyTo ! TooManyPlayers
           Actor.same
@@ -58,7 +65,7 @@ object Game extends Logging {
           Actor.same
         } else {
           replyTo ! PlayerAdded(player)
-          preparation(players :+ player, playerGateway)
+          preparation(id, name, players :+ player, playerGateway)
         }
 
       case (ctx, AddPlayer(player, replyTo)) =>
@@ -91,18 +98,28 @@ object Game extends Logging {
           replyTo ! GameStarted
           Actor.deferred { ctx =>
             board ! Board.NewRound
-            gameStarted(board, players, playerGateway)
+            gameStarted(id, name, board, players, playerGateway)
           }
         }
       case (_, FinishGame(replyTo)) =>
         replyTo ! GameFinished
-        preparation(Seq.empty, playerGateway)
+        preparation(id, name, Seq.empty, playerGateway)
 
       case (ctx, RoundFinished) =>
         Actor.same
 
       case (_, GetBoardPositions(replyTo)) =>
         replyTo ! BoardStateNotAvailable
+        Actor.same
+
+      case (_, GetGameState(replyTo)) =>
+        val playerNames = players.map(_.name)
+        replyTo ! GameState(id,
+                            name,
+                            players = playerNames,
+                            state = Preparation.toString,
+                            winner = None,
+                            round = None)
         Actor.same
 
     }
@@ -112,7 +129,9 @@ object Game extends Logging {
                             ctx: ActorContext[Game.Command]): ActorRef[Board.Command] =
     ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self), Board.Name)
 
-  private def gameStarted(board: ActorRef[Board.Command],
+  private def gameStarted(id: String,
+                          name: String,
+                          board: ActorRef[Board.Command],
                           players: Seq[Player],
                           playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
@@ -122,6 +141,15 @@ object Game extends Logging {
         Actor.same
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)
+        Actor.same
+      case (_, GetGameState(replyTo)) =>
+        val playerNames = players.map(_.name)
+        replyTo ! GameState(id,
+                            name,
+                            players = playerNames,
+                            state = Running.toString,
+                            winner = None,
+                            round = None)
         Actor.same
       case (_, GetPlayers(replyTo)) =>
         replyTo ! Players(players.map(_.name))
@@ -138,8 +166,19 @@ object Game extends Logging {
       case (ctx, FinishGame(replyTo)) =>
         ctx.stop(board)
         replyTo ! GameFinished
-        preparation(Seq.empty, playerGateway)
+        preparation(id, name, Seq.empty, playerGateway)
     }
+
+  sealed trait State
+  final object Preparation extends State {
+    override def toString: String = "Preparation"
+  }
+  final object Running extends State {
+    override def toString: String = "Running"
+  }
+  final object Finished extends State {
+    override def toString: String = "Finished"
+  }
 
   sealed trait Command
 
@@ -150,6 +189,7 @@ object Game extends Logging {
   final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
   final case class FinishGame(replyTo: ActorRef[GameFinishedReply])         extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
+  final case class GetGameState(replyTo: ActorRef[GetGameStateReply])       extends Command
   final case object RoundFinished                                           extends Command
 
   sealed trait AddPlayerReply
@@ -168,5 +208,14 @@ object Game extends Logging {
 
   sealed trait GameFinishedReply
   final case object GameFinished extends GameFinishedReply
+
+  sealed trait GetGameStateReply
+  final case class GameState(id: String,
+                             name: String,
+                             players: Seq[String],
+                             state: String,
+                             winner: Option[String],
+                             round: Option[Int])
+      extends GetGameStateReply
 
 }

@@ -47,24 +47,24 @@
                 <div class="column is-one-third" v-for="game in games">
                     <div class="card">
                         <div class="card-content ">
-                            <h2 class="title is-2">Game: {{ game }}</h2>
+                            <h2 class="title is-2">Game: {{ game.name }}</h2>
                             <div class="content">
-                                <p class="is-5"><strong>Players:</strong> 0</p>
-                                <p class="is-5"><strong>Status</strong>: Waiting</p>
+                                <p class="is-5"><strong>Players:</strong> {{ game.players.length }}</p>
+                                <p class="is-5"><strong>State</strong>: {{ game.state }}</p>
                             </div>
 
                         </div>
                         <footer class="card-footer">
                             <div class="card-footer-item">
                                 <div class="column has-text-right">
-                                    <a :href="'addPlayer.html?id='+ game" class="button is-info">
+                                    <a :href="'addPlayer.html?id='+ game.id" class="button is-info">
                                         <span class="icon">
                                             <i class="fas fa-plus"></i>
                                         </span>
                                         <span>Join Game</span>
 
                                     </a>
-                                    <a :href="'game.html?id='+ game" class="button is-info">
+                                    <a :href="'game.html?id='+ game.id" class="button is-info">
                                         <span class="icon">
                                             <i class="fas fa-video"></i>
                                         </span>
@@ -81,7 +81,6 @@
             </div>
         </div>
     </div>
-
 
 </div>
 </body>
