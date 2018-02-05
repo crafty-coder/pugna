@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:v-bind="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pugna</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+    <script src="https://unpkg.com/vue"></script>
+    <script src="https://unpkg.com/vue-resource"></script>
+
+    <script src="appAddPlayer.js"></script>
+</head>
+
+<div id="app">
+
+    <section class="hero is-primary">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title is-1 has-text-centered">
+                    <a href="index.html">Pugna</a>
+                </h1>
+                <p class="subtitle has-text-centered">
+                    An online programmable Bord Game
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section">
+        <div class="container .control is-fluid">
+            <div class="columns">
+                <div class="column is-half is-offset-one-quarter">
+
+                    <div v-show="showSuccess" class="notification is-success">
+                        <button class="delete" @click="showSuccess = false"></button>
+                        Player added successfully, you could go to <a href="index.html">index</a> or to <a href="game.html">game</a>
+                    </div>
+
+                    <div v-show="showError" class="notification is-danger">
+                        <button class="delete" @click="showError = false"></button>
+                        {{errorText}}
+                    </div>
+
+                    <div class="field">
+                        <label class="label">Username</label>
+                        <div class="control has-icons-left has-icons-right">
+                            <input v-model="playerName" class="input" type="text" placeholder="Username">
+                            <span class="icon is-small is-left">
+                                 <i class="fas fa-user"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label">Host</label>
+                        <div class="control has-icons-left has-icons-right">
+                            <input v-model="playerHost" class="input" type="text" placeholder="http://<host>">
+                            <span class="icon is-small is-left">
+                                <i class="fas fa-laptop"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="column is-2 is-offset-10">
+                        <div class="field is-grouped">
+                            <div class="control">
+                                <button v-bind:class="{ 'is-loading': isAddingNewPlayer }" class="button is-info"
+                                        @click="addPlayer" :disabled="isAddPlayerButtonDisabled">Add
+                                </button>
+                            </div>
+                            <div class="control">
+                                <a href="index.html" class="button is-danger" :disabled="isAddingNewPlayer">
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+</body>
+</html>
+
+
