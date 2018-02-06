@@ -1,18 +1,30 @@
-window.addEventListener('load', function () {
+function resize() {
+    const canvas = document.getElementById("boardCanvas");
+    const canvasContainer = document.getElementById("boardContainer");
+    canvas.width = canvasContainer.clientWidth *0.5;
+    canvas.height = canvasContainer.clientWidth *0.5;
+}
 
-    function getURLParameter(sParam) {
-        var sPageURL = window.location.search.substring(1);
-        var sURLVariables = sPageURL.split('&');
-        for (var i = 0; i < sURLVariables.length; i++) {
-            var sParameterName = sURLVariables[i].split('=');
-            if (sParameterName[0] === sParam) {
-                return sParameterName[1];
-            }
+function getURLParameter(sParam) {
+    var sPageURL = window.location.search.substring(1);
+    var sURLVariables = sPageURL.split('&');
+    for (var i = 0; i < sURLVariables.length; i++) {
+        var sParameterName = sURLVariables[i].split('=');
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1];
         }
     }
+}
+
+
+window.addEventListener('resize', function(){
+    resize();
+});
+
+window.addEventListener('load', function () {
 
     const id = getURLParameter("id");
-
+    resize();
 
     let app = new Vue({
         el: '#app',
@@ -85,13 +97,6 @@ window.addEventListener('load', function () {
 
             }
             ,
-            resize() {
-                //TODO is worth?
-                console.log("Resize!");
-                this.$refs.pa.clientWidth = this.$refs.pa.clientWidth;
-                this.$refs.pa.clientHeight = this.$refs.pa.clientWidth;
-            }
-            ,
             reloadData() {
                 fetch("/games/" + this.gameId + "/state")
                     .then(response => response.json())
@@ -126,9 +131,6 @@ window.addEventListener('load', function () {
                         console.error("Fail to finish the game")
                     });
             }
-        },
-        mounted() {
-            this.resize();
         },
         created() {
             this.loadPlayers();
