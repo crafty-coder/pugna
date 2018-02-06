@@ -226,7 +226,7 @@ object Game extends Logging {
       replyTo ! GameState(id = id,
                           name = name,
                           players = playerNames,
-                          state = Running.toString,
+                          state = Finished.toString,
                           winner = Some(winner))
       Actor.same
     case (_, RoundFinished(_, _)) =>
