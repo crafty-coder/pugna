@@ -24,6 +24,9 @@ object Board extends Logging {
 
   val Name = "board"
 
+  def getBoardState(replyTo: ActorRef[GetBoardStateReply]): GetBoardState =
+    GetBoardState(replyTo)
+
   def apply(players: Seq[Player],
             boardSize: Int,
             numOfSoldiers: Int,
@@ -67,7 +70,7 @@ object Board extends Logging {
         Actor.same
       case (ctx, RoundFinished) =>
         logger.debug("Round Finished")
-        game ! Game.RoundFinished
+        game ! Game.RoundFinished(state.round + 1, positions = state.positions)
         runningBoard(state.copy(round = state.round + 1), players, playerGateway, game)
 
     }

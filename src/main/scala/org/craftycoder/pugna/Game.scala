@@ -16,11 +16,17 @@
 
 package org.craftycoder.pugna
 
+import java.util.concurrent.TimeUnit
+
+import akka.actor.Scheduler
 import akka.typed.scaladsl.{ Actor, ActorContext }
 import akka.typed.{ ActorRef, Behavior }
+import akka.util.Timeout
 import org.apache.logging.log4j.scala.Logging
 import org.craftycoder.pugna.Board._
+import akka.typed.scaladsl.AskPattern._
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Success
 
 object Game extends Logging {
@@ -28,6 +34,7 @@ object Game extends Logging {
   val Name                = "game"
   val BOARD_SIZE          = 50
   val NUM_SOLDIERS_PLAYER = 20
+  val MAX_ROUNDS          = 1000
 
   def addPlayer(player: Player)(replyTo: ActorRef[AddPlayerReply]): AddPlayer =
     AddPlayer(player, replyTo)
@@ -105,7 +112,7 @@ object Game extends Logging {
         replyTo ! GameRestarted
         preparation(id, name, players, playerGateway)
 
-      case (ctx, RoundFinished) =>
+      case (_, RoundFinished(_, _)) =>
         Actor.same
 
       case (_, GetBoardPositions(replyTo)) =>
@@ -135,21 +142,43 @@ object Game extends Logging {
                           players: Seq[Player],
                           playerGateway: PlayerGateway): Behavior[Command] =
     Actor.immutable {
-      case (ctx, RoundFinished) =>
-        //TODO check for winner
-        board ! Board.NewRound
-        Actor.same
+      case (_, RoundFinished(round, positions)) =>
+        if (isGameFinish(round, positions, players.size)) {
+          gameFinished(id = id,
+                       name = name,
+                       players = players,
+                       winner = winner(positions),
+                       playerGateway = playerGateway)
+        } else {
+          board ! Board.NewRound
+          Actor.same
+        }
+
       case (_, GetBoardPositions(replyTo)) =>
         board ! GetBoardState(replyTo)
         Actor.same
-      case (_, GetGameState(replyTo)) =>
+      case (ctx, GetGameState(replyTo)) =>
         val playerNames = players.map(_.name)
-        replyTo ! GameState(id,
-                            name,
-                            players = playerNames,
-                            state = Running.toString,
-                            winner = None,
-                            round = None)
+
+        implicit val i: Timeout                   = Timeout(100, TimeUnit.MILLISECONDS)
+        implicit val sc: Scheduler                = ctx.system.scheduler
+        implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
+
+        (board ? Board.getBoardState).foreach({
+          case BoardStateReply(BoardState(positions, _, round, _)) =>
+            replyTo ! GameState(id,
+                                name,
+                                players = playerNames,
+                                state = Running.toString,
+                                round = Some(round),
+                                positions = positions)
+          case _ =>
+            replyTo ! GameState(id = id,
+                                name = name,
+                                players = playerNames,
+                                state = Running.toString)
+        })
+
         Actor.same
       case (_, GetPlayers(replyTo)) =>
         replyTo ! Players(players.map(_.name))
@@ -168,6 +197,59 @@ object Game extends Logging {
         replyTo ! GameRestarted
         preparation(id, name, players, playerGateway)
     }
+
+  private def isGameFinish(round: Int, positions: Seq[Position], numOfPlayers: Int): Boolean = {
+    val playerWithAllSoldiers = positions
+      .groupBy(_.playerName)
+      .map({ case (_, pos) => pos.size })
+      .exists(_ == NUM_SOLDIERS_PLAYER * numOfPlayers)
+    round > MAX_ROUNDS || playerWithAllSoldiers
+  }
+
+  private def winner(positions: Seq[Position]): String =
+    positions
+      .groupBy(_.playerName)
+      .map({ case (name, pos) => (name, pos.size) })
+      .toList
+      .sortBy(_._2)(Ordering[Int].reverse)
+      .headOption
+      .map(_._1)
+      .getOrElse("")
+
+  private def gameFinished(id: String,
+                           name: String,
+                           players: Seq[Player],
+                           winner: String,
+                           playerGateway: PlayerGateway): Behavior[Command] = Actor.immutable {
+    case (_, GetGameState(replyTo)) =>
+      val playerNames = players.map(_.name)
+      replyTo ! GameState(id = id,
+                          name = name,
+                          players = playerNames,
+                          state = Running.toString,
+                          winner = Some(winner))
+      Actor.same
+    case (_, RoundFinished(_, _)) =>
+      Actor.same
+    case (_, GetBoardPositions(replyTo)) =>
+      replyTo ! BoardStateNotAvailable
+      Actor.same
+    case (_, GetPlayers(replyTo)) =>
+      replyTo ! Players(players.map(_.name))
+      Actor.same
+    case (_, AddPlayer(_, replyTo)) =>
+      replyTo ! GameAlreadyStarted
+      Actor.same
+    case (_, AddReachablePlayer(_, replyTo)) =>
+      replyTo ! GameAlreadyStarted
+      Actor.same
+    case (_, StartGame(replyTo)) =>
+      replyTo ! GameAlreadyStarted
+      Actor.same
+    case (_, RestartGame(replyTo)) =>
+      replyTo ! GameRestarted
+      preparation(id, name, players, playerGateway)
+  }
 
   sealed trait State
   final object Preparation extends State {
@@ -190,7 +272,7 @@ object Game extends Logging {
   final case class RestartGame(replyTo: ActorRef[GameRestartedReply])       extends Command
   final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
   final case class GetGameState(replyTo: ActorRef[GetGameStateReply])       extends Command
-  final case object RoundFinished                                           extends Command
+  final case class RoundFinished(round: Int, positions: Seq[Position])      extends Command
 
   sealed trait AddPlayerReply
   final case object UnReachablePlayer          extends AddPlayerReply
@@ -210,12 +292,15 @@ object Game extends Logging {
   final case object GameRestarted extends GameRestartedReply
 
   sealed trait GetGameStateReply
+
   final case class GameState(id: String,
                              name: String,
                              players: Seq[String],
+                             boardSize: Int = BOARD_SIZE,
                              state: String,
-                             winner: Option[String],
-                             round: Option[Int])
+                             winner: Option[String] = None,
+                             round: Option[Int] = None,
+                             positions: Seq[Position] = Seq.empty)
       extends GetGameStateReply
 
 }

@@ -20,6 +20,8 @@ window.addEventListener('load', function () {
             gameId: id,
             players: [],
             scores: [],
+            winner: "",
+            status: "",
             round: 0
         },
         computed: {
@@ -49,11 +51,12 @@ window.addEventListener('load', function () {
                     colour += ('00' + value.toString(16)).substr(-2);
                 }
                 return colour;
-            }
-            ,
-            drawBoard(boardSize, players, positions, round) {
+            },
+            drawBoard(boardSize, players, positions, round,winner,state) {
 
                 this.round = round;
+                this.winner = winner;
+                this.state = state;
 
                 const c = document.getElementById("boardCanvas");
                 const ctx = c.getContext("2d");
@@ -90,16 +93,14 @@ window.addEventListener('load', function () {
             }
             ,
             reloadData() {
-                console.log("Reloading Data!");
-                fetch("/games/" + this.gameId + "/board")
+                fetch("/games/" + this.gameId + "/state")
                     .then(response => response.json())
                     .then(data => {
-                        this.drawBoard(data.boardSize, data.players, data.positions, data.round).bind(this);
+                        this.drawBoard(data.boardSize, data.players, data.positions, data.round, data.winner,data.state);
                     });
 
             }
             ,
-
             loadPlayers() {
                 fetch("/games/" + this.gameId + "/players")
                     .then(response => response.json())

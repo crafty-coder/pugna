@@ -50,7 +50,9 @@
 
 
                     <div class="section">
-                        <h3 class="title is-3">Round: {{round}}</h3>
+                        <p class="title is-4">State: {{state}}</p>
+                        <p class="title is-4">Round: {{round}}</p>
+                        <p v-if="winner != null && winner.length > 0" class="title is-4">Winner: {{winner}}</p>
 
                         <table class="table">
                             <thead>

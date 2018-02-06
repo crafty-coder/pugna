@@ -51,6 +51,7 @@
                             <div class="content">
                                 <p class="is-5"><strong>Players:</strong> {{ game.players.length }}</p>
                                 <p class="is-5"><strong>State</strong>: {{ game.state }}</p>
+                                <p v-if="game.winner != null && game.winner.length > 0" class="is-5"><strong>Winner</strong>: {{ game.winner }}</p>
                             </div>
 
                         </div>

@@ -30,9 +30,7 @@ import akka.typed.{ ActorRef, Behavior }
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Board.{ BoardStateNotAvailable, BoardStateReply }
-import org.craftycoder.pugna.Game.logger
-import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, getGame }
+import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, getGameRef }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -99,7 +97,7 @@ object Api extends Logging {
       pathEndOrSingleSlash {
         get {
           import Universe._
-          onSuccess(universe ? getGame(gameId)) {
+          onSuccess(universe ? getGameRef(gameId)) {
             case GameNotFound =>
               complete(NotFound)
             case GameRef(game) =>
@@ -110,7 +108,7 @@ object Api extends Logging {
           }
         } ~ post {
           entity(as[Player]) { player =>
-            onSuccess(universe ? getGame(gameId)) {
+            onSuccess(universe ? getGameRef(gameId)) {
               case GameNotFound =>
                 complete(NotFound)
               case GameRef(game) =>
@@ -131,7 +129,7 @@ object Api extends Logging {
     } ~ path("games" / Segment / "start") { gameId =>
       put {
         logger.debug("Starting Game!")
-        onSuccess(universe ? getGame(gameId)) {
+        onSuccess(universe ? getGameRef(gameId)) {
           case GameNotFound =>
             complete(NotFound)
           case GameRef(game) =>
@@ -146,7 +144,7 @@ object Api extends Logging {
     } ~ path("games" / Segment / "restart") { gameId =>
       put {
         logger.debug("Restart Game!")
-        onSuccess(universe ? getGame(gameId)) {
+        onSuccess(universe ? getGameRef(gameId)) {
           case GameNotFound =>
             complete(NotFound)
           case GameRef(game) =>
@@ -156,17 +154,16 @@ object Api extends Logging {
             }
         }
       }
-    } ~ path("games" / Segment / "board") { gameId =>
+    } ~ path("games" / Segment / "state") { gameId =>
       pathEndOrSingleSlash {
         get {
-          onSuccess(universe ? getGame(gameId)) {
+          onSuccess(universe ? getGameRef(gameId)) {
             case GameNotFound =>
               complete(NotFound)
             case GameRef(game) =>
               import Game._
-              onSuccess(game ? getPositions()) {
-                case BoardStateReply(b)     => complete(b)
-                case BoardStateNotAvailable => complete(NotFound)
+              onSuccess(game ? getGameState()) {
+                case b @ GameState(_, _, _, _, _, _, _, _) => complete(b)
               }
           }
         }

@@ -34,7 +34,8 @@ object Universe extends Logging {
 
   val Name = "Universe"
 
-  def getGame(gameId: String)(replyTo: ActorRef[GetGameReply]): GetGame = GetGame(gameId, replyTo)
+  def getGameRef(gameId: String)(replyTo: ActorRef[GetGameRefReply]): GetGameRef =
+    GetGameRef(gameId, replyTo)
 
   def getGames()(replyTo: ActorRef[GetGamesReply]): GetGames = GetGames(replyTo)
 
@@ -73,7 +74,7 @@ object Universe extends Logging {
 
           Actor.same
 
-        case (_, GetGame(gameId, replyTo)) =>
+        case (_, GetGameRef(gameId, replyTo)) =>
           games.get(gameId) match {
             case Some(ref) => replyTo ! GameRef(ref)
             case _         => replyTo ! GameNotFound
@@ -92,7 +93,7 @@ object Universe extends Logging {
 
   final case class GetGames(replyTo: ActorRef[GetGamesReply]) extends Command
 
-  final case class GetGame(gameId: String, replyTo: ActorRef[GetGameReply]) extends Command
+  final case class GetGameRef(gameId: String, replyTo: ActorRef[GetGameRefReply]) extends Command
 
   sealed trait GameCreatedReply
 
@@ -102,10 +103,10 @@ object Universe extends Logging {
 
   final case class Games(games: List[GameState]) extends GetGamesReply
 
-  sealed trait GetGameReply
+  sealed trait GetGameRefReply
 
-  final case class GameRef(game: ActorRef[Game.Command]) extends GetGameReply
+  final case class GameRef(game: ActorRef[Game.Command]) extends GetGameRefReply
 
-  final case object GameNotFound extends GetGameReply
+  final case object GameNotFound extends GetGameRefReply
 
 }
