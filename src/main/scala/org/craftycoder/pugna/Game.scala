@@ -147,6 +147,8 @@ object Game extends Logging {
           gameFinished(id = id,
                        name = name,
                        players = players,
+                       round = round,
+                       positions = positions,
                        winner = winner(positions),
                        playerGateway = playerGateway)
         } else {
@@ -220,11 +222,15 @@ object Game extends Logging {
                            name: String,
                            players: Seq[Player],
                            winner: String,
+                           round: Int,
+                           positions: Seq[Position],
                            playerGateway: PlayerGateway): Behavior[Command] = Actor.immutable {
     case (_, GetGameState(replyTo)) =>
       val playerNames = players.map(_.name)
       replyTo ! GameState(id = id,
                           name = name,
+                          round = Some(round),
+                          positions = positions,
                           players = playerNames,
                           state = Finished.toString,
                           winner = Some(winner))
