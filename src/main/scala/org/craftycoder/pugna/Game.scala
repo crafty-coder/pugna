@@ -90,7 +90,7 @@ object Game extends Logging {
         }
 
       case (_, GetPlayers(replyTo)) =>
-        replyTo ! Players(players.map(_.name))
+        replyTo ! Players(players.map(p => PlayerView(p.name, p.color)))
         Actor.same
 
       case (ctx, StartGame(replyTo)) =>
@@ -114,10 +114,10 @@ object Game extends Logging {
         Actor.same
 
       case (_, GetGameState(replyTo)) =>
-        val playerNames = players.map(_.name)
+        val playerViews = players.map(p => PlayerView(p.name, p.color))
         replyTo ! GameState(id,
                             name,
-                            players = playerNames,
+                            players = playerViews,
                             state = Preparation.toString,
                             winner = None,
                             round = None)
@@ -150,7 +150,7 @@ object Game extends Logging {
         }
 
       case (ctx, GetGameState(replyTo)) =>
-        val playerNames = players.map(_.name)
+        val playerViews = players.map(p => PlayerView(p.name, p.color))
 
         implicit val i: Timeout                   = Timeout(100, TimeUnit.MILLISECONDS)
         implicit val sc: Scheduler                = ctx.system.scheduler
@@ -160,7 +160,7 @@ object Game extends Logging {
           case BoardStateReply(BoardState(positions, _, round, metrics)) =>
             replyTo ! GameState(id,
                                 name,
-                                players = playerNames,
+                                players = playerViews,
                                 metrics = metrics,
                                 state = Running.toString,
                                 round = Some(round),
@@ -168,7 +168,7 @@ object Game extends Logging {
         })
         Actor.same
       case (_, GetPlayers(replyTo)) =>
-        replyTo ! Players(players.map(_.name))
+        replyTo ! Players(players.map(p => PlayerView(p.name, p.color)))
         Actor.same
       case (_, AddPlayer(_, replyTo)) =>
         replyTo ! GameAlreadyStarted
@@ -211,7 +211,7 @@ object Game extends Logging {
                            playerGateway: PlayerGateway): Behavior[Command] = Actor.immutable {
 
     case (ctx, GetGameState(replyTo)) =>
-      val playerNames = players.map(_.name)
+      val playerViews = players.map(p => PlayerView(p.name, p.color))
 
       implicit val i: Timeout                   = Timeout(100, TimeUnit.MILLISECONDS)
       implicit val sc: Scheduler                = ctx.system.scheduler
@@ -221,7 +221,7 @@ object Game extends Logging {
         case BoardStateReply(BoardState(positions, _, round, metrics)) =>
           replyTo ! GameState(id,
                               name,
-                              players = playerNames,
+                              players = playerViews,
                               metrics = metrics,
                               state = Finished.toString,
                               round = Some(round),
@@ -233,7 +233,7 @@ object Game extends Logging {
     case (_, RoundFinished(_, _)) =>
       Actor.same
     case (_, GetPlayers(replyTo)) =>
-      replyTo ! Players(players.map(_.name))
+      replyTo ! Players(players.map(p => PlayerView(p.name, p.color)))
       Actor.same
     case (_, AddPlayer(_, replyTo)) =>
       replyTo ! GameAlreadyStarted
@@ -279,7 +279,7 @@ object Game extends Logging {
   final case class PlayerAdded(player: Player) extends AddPlayerReply
 
   sealed trait GetPlayersReply
-  final case class Players(players: Seq[String]) extends GetPlayersReply
+  final case class Players(players: Seq[PlayerView]) extends GetPlayersReply
 
   sealed trait StartGameReply
   final case object GameStarted   extends StartGameReply
@@ -292,7 +292,7 @@ object Game extends Logging {
 
   final case class GameState(id: String,
                              name: String,
-                             players: Seq[String],
+                             players: Seq[PlayerView],
                              metrics: Seq[PlayerMetrics] = Seq.empty,
                              boardSize: Int = BOARD_SIZE,
                              state: String,

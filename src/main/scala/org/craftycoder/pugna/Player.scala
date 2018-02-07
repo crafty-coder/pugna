@@ -16,7 +16,10 @@
 
 package org.craftycoder.pugna
 
-final case class Player(name: String, host: String) {
+final case class Player(name: String, host: String, color: String) {
   require(name.nonEmpty, "name must not be empty!")
   require(host.nonEmpty, "host must not be empty!")
+  require(color.nonEmpty, "color must not be empty!")
 }
+
+final case class PlayerView(name: String, color: String)

@@ -42,9 +42,9 @@ window.addEventListener('load', function () {
                 if (this.scores.length === 0) {
                     return this.players.map(player => {
                         return {
-                            name: player,
+                            name: player.name,
                             points: 0,
-                            color: "",
+                            color: player.color,
                             killingBlows: 0,
                             deaths: 0,
                             invalidMoves: 0
@@ -56,17 +56,8 @@ window.addEventListener('load', function () {
             }
         },
         methods: {
-            toColor(str) {
-                let hash = 0;
-                for (let i = 0; i < str.length; i++) {
-                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                let colour = '#';
-                for (let i = 0; i < 3; i++) {
-                    const value = (hash >> (i * 8)) & 0xFF;
-                    colour += ('00' + value.toString(16)).substr(-2);
-                }
-                return colour;
+            toColor(playerName) {
+                return this.players.find(player => player.name === playerName).color
             },
             drawBoard(boardSize, positions, round, winner, state, metrics) {
 
