@@ -44,8 +44,8 @@
                 <div class="column is-4 is-info">
 
                     <div class="section">
-                        <a href="#" class="button is-info" @click="startGame">Start</a>
-                        <a href="#" class="button is-warning" @click="restartGame">Restart</a>
+                        <a :disabled="state != 'Preparation'" href="#" class="button is-info" @click="startGame">Start</a>
+                        <!--<a href="#" class="button is-warning" @click="restartGame">Restart</a>-->
                     </div>
 
 
