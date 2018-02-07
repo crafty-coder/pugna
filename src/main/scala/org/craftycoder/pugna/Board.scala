@@ -54,31 +54,59 @@ object Board extends Logging {
         logger.debug(s"Applying movement: $position -> $movement")
         val playerIndex = players.indexWhere(p => p.name == position.playerName)
         applyMovement(position, movement, playerIndex, state) match {
-          case Some(newState) =>
+          case MovementResult(Some(newState), None) =>
             logger.debug("Movement Applied!")
             replyTo ! MoveApplied(newState, position)
             runningBoard(newState, players, playerGateway, game)
-          case None =>
+          case MovementResult(Some(newState), Some((killer, killed))) =>
+            logger.debug(s"Movement Applied: $killer has killed $killed")
+            val metricsUpdated = addKillingToMetrics(killer, killed, newState.metrics)
+            replyTo ! MoveApplied(newState, position)
+            runningBoard(newState.copy(metrics = metricsUpdated), players, playerGateway, game)
+          case _ =>
             logger.debug(s"Invalid Move($position, $movement)! state: $state")
+            val metricsUpdated = addInvalidMoveToMetrics(position.playerName, state.metrics)
             replyTo ! InvalidMove(position)
-            Actor.same
+            runningBoard(state.copy(metrics = metricsUpdated), players, playerGateway, game)
         }
-
       case (ctx, NewRound) =>
         logger.debug("Round Started")
         ctx.spawn(Round(state, players, playerGateway, ctx.self), s"${Round.Name}-${state.round}")
         Actor.same
-      case (ctx, RoundFinished) =>
+      case (_, RoundFinished) =>
         logger.debug("Round Finished")
         game ! Game.RoundFinished(state.round + 1, positions = state.positions)
         runningBoard(state.copy(round = state.round + 1), players, playerGateway, game)
 
     }
 
-  private def applyMovement(position: Position,
-                            movement: Movement,
-                            playerIndex: Int,
-                            boardState: BoardState): Option[BoardState] =
+  private def addInvalidMoveToMetrics(
+      playerName: String,
+      players: Seq[PlayerMetrics]
+  ): Seq[PlayerMetrics] =
+    players.map { metric =>
+      if (metric.name == playerName) metric.copy(invalidMoves = metric.invalidMoves + 1)
+      else metric
+    }
+
+  private def addKillingToMetrics(
+      killerName: String,
+      killedName: String,
+      players: Seq[PlayerMetrics]
+  ): Seq[PlayerMetrics] =
+    players.map { metric =>
+      if (metric.name == killerName)
+        metric.copy(killingBlows = metric.killingBlows + 1)
+      else if (metric.name == killedName) metric.copy(deaths = metric.deaths + 1)
+      else metric
+    }
+
+  private def applyMovement(
+      position: Position,
+      movement: Movement,
+      playerIndex: Int,
+      boardState: BoardState
+  ): MovementResult =
     calculateTargetCoordinates(position.coordinate, movement, boardState.boardSize) match {
       case Some(targetCoordinates) =>
         val targetPosition: Option[Position] =
@@ -88,29 +116,31 @@ object Board extends Logging {
             logger.debug(s"Moved to $targetCoordinates")
             val newPositions = boardState.positions
               .filterNot(_ == position) :+ Position(targetCoordinates, position.playerName)
-            Some(boardState.copy(positions = newPositions))
+            MovementResult(Some(boardState.copy(positions = newPositions)), None)
           case Some(occupiedPosition) if occupiedPosition.playerName != position.playerName =>
-            logger.debug(s"Kill -> $occupiedPosition Positions=${boardState.positions.size}")
+            val killed = occupiedPosition.playerName
+            val killer = position.playerName
+
+            logger.debug(s"$killer has killed $killed on ${occupiedPosition.coordinate}")
 
             val positionsAfterKill: Seq[Position] =
               boardState.positions.filterNot(p => p.coordinate == occupiedPosition.coordinate)
-            logger.debug(s"Positions after kill =${positionsAfterKill.size}")
 
             val respawnCoordinate =
               getFreeCoordinateForPlayer(playerIndex, boardState.boardSize, positionsAfterKill)
-            logger.debug(s"Respawn in -> $respawnCoordinate")
+            logger.debug(s"$killer got new position: $respawnCoordinate for his killing")
             val newPositions: Seq[Position] = positionsAfterKill :+ Position(
               respawnCoordinate,
               position.playerName
             )
-            logger.debug(s"Positions after respawn =${newPositions.size}")
 
-            Some(boardState.copy(positions = newPositions))
+            MovementResult(Some(boardState.copy(positions = newPositions)), Some(killer, killed))
           case _ =>
             logger.debug(s"Stays")
-            Some(boardState)
+            MovementResult(Some(boardState), None)
         }
-      case None => None
+      case None =>
+        MovementResult(None, None)
     }
 
   private def calculateTargetCoordinates(coordinate: Coordinate,
@@ -150,10 +180,8 @@ object Board extends Logging {
       round: Int,
       boardSize: Int,
       players: Seq[Player]
-  ) = {
-    val playerNames = players.map(_.name)
-    BoardState(occupiedPositions, boardSize, round, playerNames)
-  }
+  ) =
+    BoardState(occupiedPositions, boardSize, round, players.map(p => PlayerMetrics(name = p.name)))
 
   private def assignInitialPositions(players: Seq[Player],
                                      boardSize: Int,
@@ -183,6 +211,8 @@ object Board extends Logging {
     coordinate
   }
 
+  case class MovementResult(state: Option[BoardState], killing: Option[(String, String)])
+
   sealed trait Command
 
   final case class GetBoardState(replyTo: ActorRef[GetBoardStateReply]) extends Command
@@ -197,8 +227,6 @@ object Board extends Logging {
   sealed trait GetBoardStateReply
 
   final case class BoardStateReply(state: BoardState) extends GetBoardStateReply
-
-  final case object BoardStateNotAvailable extends GetBoardStateReply
 
   sealed trait NewRoundReply
 

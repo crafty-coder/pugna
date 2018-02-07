@@ -39,7 +39,7 @@ class BoardSpec extends WordSpec with Matchers {
         val response = inbox.receiveMsg()
         response shouldBe a[BoardState]
         response.asInstanceOf[BoardState].boardSize shouldBe 10
-        response.asInstanceOf[BoardState].players shouldBe players.map(_.name)
+        response.asInstanceOf[BoardState].metrics shouldBe players.map(_.name)
         response.asInstanceOf[BoardState].positions.size shouldBe 5 * players.size
 
       }

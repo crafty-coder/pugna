@@ -163,7 +163,7 @@ object Api extends Logging {
             case GameRef(game) =>
               import Game._
               onSuccess(game ? getGameState()) {
-                case b @ GameState(_, _, _, _, _, _, _, _) => complete(b)
+                case b: GameState => complete(b)
               }
           }
         }

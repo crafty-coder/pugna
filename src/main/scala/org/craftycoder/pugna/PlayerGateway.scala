@@ -35,7 +35,9 @@ class PlayerGateway(private val wsClient: StandaloneAhcWSClient)(implicit ec: Ex
                          boardState: BoardState,
                          positionToMove: Position): Future[Movement] = {
 
-    val query = toQuery(NextMovementRequest(boardState, positionToMove))
+    import boardState._
+    val state = State(positions, boardSize, round, metrics.map(_.name))
+    val query = toQuery(NextMovementRequest(state, positionToMove))
 
     val url = s"${player.host}/nextmove"
     logger.debug(s"--> $url")
@@ -83,6 +85,11 @@ class PlayerGateway(private val wsClient: StandaloneAhcWSClient)(implicit ec: Ex
 
   }
 
-  private case class NextMovementRequest(boardState: BoardState, positionToMove: Position)
+  private case class NextMovementRequest(boardState: State, positionToMove: Position)
+
+  private case class State(positions: Seq[Position],
+                           boardSize: Int,
+                           round: Int,
+                           players: Seq[String])
 
 }

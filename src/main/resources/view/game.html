@@ -37,11 +37,11 @@
 
         <div class="container is-fluid">
             <div class="columns">
-                <div id="boardContainer" class="column is-9 is-primary has-text-centered">
+                <div id="boardContainer" class="column is-8 is-primary has-text-centered">
                     <canvas ref="pa" id="boardCanvas" width="500" height="500"
                             style="border:1px solid #000000;"></canvas>
                 </div>
-                <div class="column is-3 is-info">
+                <div class="column is-4 is-info">
 
                     <div class="section">
                         <a href="#" class="button is-info" @click="startGame">Start</a>
@@ -57,22 +57,27 @@
                         <table class="table">
                             <thead>
                             <tr>
+                                <th>Color</th>
                                 <th>Player</th>
                                 <th>Points</th>
-                                <th>Color</th>
+                                <th>Killings</th>
+                                <th>Deaths</th>
+                                <th>Invalid Moves</th>
                             </tr>
                             </thead>
                             <tbody id="scores-table">
                             <tr v-for="score in scoresComputed">
+                                <td v-bind:bgColor="score.color"></td>
                                 <td>{{score.name}}</td>
                                 <td>{{score.points}}</td>
-                                <td v-bind:bgColor="score.color"></td>
+                                <td>{{score.killingBlows}}</td>
+                                <td>{{score.deaths}}</td>
+                                <td>{{score.invalidMoves}}</td>
                             </tr>
                             </tbody>
                         </table>
 
                     </div>
-
 
                 </div>
 
@@ -80,7 +85,6 @@
             </div>
         </div>
     </div>
-
 
 </div>
 </body>

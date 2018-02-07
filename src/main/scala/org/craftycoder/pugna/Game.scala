@@ -48,9 +48,6 @@ object Game extends Logging {
   def restartGame()(replyTo: ActorRef[GameRestartedReply]): RestartGame =
     RestartGame(replyTo)
 
-  def getPositions()(replyTo: ActorRef[GetBoardStateReply]): GetBoardPositions =
-    GetBoardPositions(replyTo)
-
   def getGameState()(replyTo: ActorRef[GetGameStateReply]): GetGameState =
     GetGameState(replyTo)
 
@@ -101,6 +98,7 @@ object Game extends Logging {
           replyTo ! TooFewPlayers
           Actor.same
         } else {
+
           val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
           replyTo ! GameStarted
           Actor.deferred { ctx =>
@@ -113,10 +111,6 @@ object Game extends Logging {
         preparation(id, name, players, playerGateway)
 
       case (_, RoundFinished(_, _)) =>
-        Actor.same
-
-      case (_, GetBoardPositions(replyTo)) =>
-        replyTo ! BoardStateNotAvailable
         Actor.same
 
       case (_, GetGameState(replyTo)) =>
@@ -146,9 +140,8 @@ object Game extends Logging {
         if (isGameFinish(round, positions, players.size)) {
           gameFinished(id = id,
                        name = name,
+                       board = board,
                        players = players,
-                       round = round,
-                       positions = positions,
                        winner = winner(positions),
                        playerGateway = playerGateway)
         } else {
@@ -156,9 +149,6 @@ object Game extends Logging {
           Actor.same
         }
 
-      case (_, GetBoardPositions(replyTo)) =>
-        board ! GetBoardState(replyTo)
-        Actor.same
       case (ctx, GetGameState(replyTo)) =>
         val playerNames = players.map(_.name)
 
@@ -167,20 +157,15 @@ object Game extends Logging {
         implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
 
         (board ? Board.getBoardState).foreach({
-          case BoardStateReply(BoardState(positions, _, round, _)) =>
+          case BoardStateReply(BoardState(positions, _, round, metrics)) =>
             replyTo ! GameState(id,
                                 name,
                                 players = playerNames,
+                                metrics = metrics,
                                 state = Running.toString,
                                 round = Some(round),
                                 positions = positions)
-          case _ =>
-            replyTo ! GameState(id = id,
-                                name = name,
-                                players = playerNames,
-                                state = Running.toString)
         })
-
         Actor.same
       case (_, GetPlayers(replyTo)) =>
         replyTo ! Players(players.map(_.name))
@@ -220,25 +205,32 @@ object Game extends Logging {
 
   private def gameFinished(id: String,
                            name: String,
+                           board: ActorRef[Board.Command],
                            players: Seq[Player],
                            winner: String,
-                           round: Int,
-                           positions: Seq[Position],
                            playerGateway: PlayerGateway): Behavior[Command] = Actor.immutable {
-    case (_, GetGameState(replyTo)) =>
+
+    case (ctx, GetGameState(replyTo)) =>
       val playerNames = players.map(_.name)
-      replyTo ! GameState(id = id,
-                          name = name,
-                          round = Some(round),
-                          positions = positions,
-                          players = playerNames,
-                          state = Finished.toString,
-                          winner = Some(winner))
+
+      implicit val i: Timeout                   = Timeout(100, TimeUnit.MILLISECONDS)
+      implicit val sc: Scheduler                = ctx.system.scheduler
+      implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
+
+      (board ? Board.getBoardState).foreach({
+        case BoardStateReply(BoardState(positions, _, round, metrics)) =>
+          replyTo ! GameState(id,
+                              name,
+                              players = playerNames,
+                              metrics = metrics,
+                              state = Finished.toString,
+                              round = Some(round),
+                              positions = positions,
+                              winner = Some(winner))
+      })
       Actor.same
+
     case (_, RoundFinished(_, _)) =>
-      Actor.same
-    case (_, GetBoardPositions(replyTo)) =>
-      replyTo ! BoardStateNotAvailable
       Actor.same
     case (_, GetPlayers(replyTo)) =>
       replyTo ! Players(players.map(_.name))
@@ -273,12 +265,11 @@ object Game extends Logging {
   final case class AddPlayer(player: Player, replyTo: ActorRef[AddPlayerReply]) extends Command
   private final case class AddReachablePlayer(player: Player, replyTo: ActorRef[AddPlayerReply])
       extends Command
-  final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])           extends Command
-  final case class StartGame(replyTo: ActorRef[StartGameReply])             extends Command
-  final case class RestartGame(replyTo: ActorRef[GameRestartedReply])       extends Command
-  final case class GetBoardPositions(replyTo: ActorRef[GetBoardStateReply]) extends Command
-  final case class GetGameState(replyTo: ActorRef[GetGameStateReply])       extends Command
-  final case class RoundFinished(round: Int, positions: Seq[Position])      extends Command
+  final case class GetPlayers(replyTo: ActorRef[GetPlayersReply])      extends Command
+  final case class StartGame(replyTo: ActorRef[StartGameReply])        extends Command
+  final case class RestartGame(replyTo: ActorRef[GameRestartedReply])  extends Command
+  final case class GetGameState(replyTo: ActorRef[GetGameStateReply])  extends Command
+  final case class RoundFinished(round: Int, positions: Seq[Position]) extends Command
 
   sealed trait AddPlayerReply
   final case object UnReachablePlayer          extends AddPlayerReply
@@ -302,6 +293,7 @@ object Game extends Logging {
   final case class GameState(id: String,
                              name: String,
                              players: Seq[String],
+                             metrics: Seq[PlayerMetrics] = Seq.empty,
                              boardSize: Int = BOARD_SIZE,
                              state: String,
                              winner: Option[String] = None,

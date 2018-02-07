@@ -1,8 +1,8 @@
 function resize() {
     const canvas = document.getElementById("boardCanvas");
     const canvasContainer = document.getElementById("boardContainer");
-    canvas.width = canvasContainer.clientWidth *0.5;
-    canvas.height = canvasContainer.clientWidth *0.5;
+    canvas.width = canvasContainer.clientWidth * 0.5;
+    canvas.height = canvasContainer.clientWidth * 0.5;
 }
 
 function getURLParameter(sParam) {
@@ -17,7 +17,7 @@ function getURLParameter(sParam) {
 }
 
 
-window.addEventListener('resize', function(){
+window.addEventListener('resize', function () {
     resize();
 });
 
@@ -32,21 +32,25 @@ window.addEventListener('load', function () {
             gameId: id,
             players: [],
             scores: [],
+            metrics: [],
             winner: "",
-            status: "",
+            state: "",
             round: 0
         },
         computed: {
             scoresComputed() {
-                if (this.scores.length ===0){
+                if (this.scores.length === 0) {
                     return this.players.map(player => {
                         return {
-                            name : player,
-                            points : 0,
-                            color : ""
+                            name: player,
+                            points: 0,
+                            color: "",
+                            killingBlows: 0,
+                            deaths: 0,
+                            invalidMoves: 0
                         }
                     });
-                }else{
+                } else {
                     return this.scores;
                 }
             }
@@ -64,7 +68,7 @@ window.addEventListener('load', function () {
                 }
                 return colour;
             },
-            drawBoard(boardSize, players, positions, round,winner,state) {
+            drawBoard(boardSize, positions, round, winner, state, metrics) {
 
                 this.round = round;
                 this.winner = winner;
@@ -76,8 +80,14 @@ window.addEventListener('load', function () {
                 ctx.clearRect(0, 0, c.width, c.height);
                 const squareSize = c.height / boardSize;
 
-                let scores = players.map(function (v) {
-                    return {name: v, points: 0};
+                let scores = metrics.map(function (metric) {
+                    return {
+                        name: metric.name,
+                        points: 0,
+                        killingBlows: metric.killingBlows,
+                        deaths: metric.deaths,
+                        invalidMoves: metric.invalidMoves
+                    };
                 });
 
                 positions.forEach(function (position) {
@@ -101,7 +111,7 @@ window.addEventListener('load', function () {
                 fetch("/games/" + this.gameId + "/state")
                     .then(response => response.json())
                     .then(data => {
-                        this.drawBoard(data.boardSize, data.players, data.positions, data.round, data.winner,data.state);
+                        this.drawBoard(data.boardSize, data.positions, data.round, data.winner, data.state, data.metrics);
                     });
 
             }

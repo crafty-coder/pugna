@@ -13,13 +13,6 @@ window.addEventListener('load', function () {
                         this.games = json.games;
                     })
             },
-            loadPlayers(gameId) {
-                fetch("/games/" + gameId + "/players")
-                    .then(response => response.json())
-                    .then(json => {
-                        return json.players
-                    })
-            },
             addGame() {
                 this.$http.post('/games')
                     .then(

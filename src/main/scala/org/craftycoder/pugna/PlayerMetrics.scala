@@ -16,7 +16,9 @@
 
 package org.craftycoder.pugna
 
-case class BoardState(positions: Seq[Position],
-                      boardSize: Int,
-                      round: Int,
-                      metrics: Seq[PlayerMetrics])
+final case class PlayerMetrics(
+    name: String,
+    killingBlows: Int = 0,
+    deaths: Int = 0,
+    invalidMoves: Int = 0
+)
