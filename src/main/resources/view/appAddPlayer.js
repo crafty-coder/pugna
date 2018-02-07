@@ -58,7 +58,6 @@ window.addEventListener('load', function () {
                         () => {
                             this.playerName = "";
                             this.playerHost = "https://pugna-player2.herokuapp.com";
-                            this.showNewPlayer = false;
                             this.isAddingNewPlayer = false;
                             this.showSuccess = true;
                         }, response => {

@@ -39,22 +39,24 @@ object Universe extends Logging {
 
   def getGames()(replyTo: ActorRef[GetGamesReply]): GetGames = GetGames(replyTo)
 
-  def createGame()(replyTo: ActorRef[GameCreatedReply]): CreateGame = CreateGame(replyTo)
+  def createGame(gameRequest: GameRequest)(replyTo: ActorRef[GameCreatedReply]): CreateGame =
+    CreateGame(gameRequest, replyTo)
 
   def apply(playerGateway: PlayerGateway): Behavior[Command] = running(playerGateway, 0, Map.empty)
+
+  case class GameRequest(name: String)
 
   private def running(playerGateway: PlayerGateway,
                       numberOfGames: Int,
                       games: Map[String, ActorRef[Game.Command]]): Behavior[Command] =
     Actor
       .immutable {
-        case (ctx, CreateGame(replyTo)) =>
-          val gameId   = numberOfGames.toString
-          val gameName = s"${Game.Name}-$numberOfGames"
+        case (ctx, CreateGame(gameRequest, replyTo)) =>
+          val gameId = numberOfGames.toString
           val gameSupervision =
-            supervise(Game(gameId, gameName, playerGateway)).onFailure[Exception](resume)
+            supervise(Game(gameId, gameRequest.name, playerGateway)).onFailure[Exception](resume)
           val game: ActorRef[Game.Command] =
-            ctx.spawn(gameSupervision, gameName)
+            ctx.spawn(gameSupervision, s"game-$gameId")
 
           ctx.watch(game)
           replyTo ! GameCreated(numberOfGames.toString)
@@ -89,7 +91,8 @@ object Universe extends Logging {
 
   sealed trait Command
 
-  final case class CreateGame(replyTo: ActorRef[GameCreatedReply]) extends Command
+  final case class CreateGame(gameRequest: GameRequest, replyTo: ActorRef[GameCreatedReply])
+      extends Command
 
   final case class GetGames(replyTo: ActorRef[GetGamesReply]) extends Command
 

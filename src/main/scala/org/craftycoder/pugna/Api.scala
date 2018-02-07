@@ -30,7 +30,7 @@ import akka.typed.{ ActorRef, Behavior }
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import org.apache.logging.log4j.scala.Logging
-import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, getGameRef }
+import org.craftycoder.pugna.Universe.{ GameNotFound, GameRef, GameRequest, getGameRef }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -82,15 +82,19 @@ object Api extends Logging {
     import io.circe.generic.auto._
 
     path("games") {
-      get {
-        complete {
-          import Universe._
-          (universe ? getGames()).mapTo[Games]
-        }
-      } ~ post {
-        import Universe._
-        onSuccess(universe ? createGame()) {
-          case GameCreated(x) => complete(Created)
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            import Universe._
+            (universe ? getGames()).mapTo[Games]
+          }
+        } ~ post {
+          entity(as[GameRequest]) { gameRequest =>
+            import Universe._
+            onSuccess(universe ? createGame(gameRequest)) {
+              case GameCreated(x) => complete(Created)
+            }
+          }
         }
       }
     } ~ path("games" / Segment / "players") { gameId =>

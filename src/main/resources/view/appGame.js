@@ -30,6 +30,7 @@ window.addEventListener('load', function () {
         el: '#app',
         data: {
             gameId: id,
+            gameName: "",
             players: [],
             scores: [],
             metrics: [],
@@ -59,8 +60,9 @@ window.addEventListener('load', function () {
             toColor(playerName) {
                 return this.players.find(player => player.name === playerName).color
             },
-            drawBoard(boardSize, positions, round, winner, state, metrics) {
+            updateData(name, boardSize, positions, round, winner, state, metrics) {
 
+                this.gameName = name;
                 this.round = round;
                 this.winner = winner;
                 this.state = state;
@@ -102,7 +104,7 @@ window.addEventListener('load', function () {
                 fetch("/games/" + this.gameId + "/state")
                     .then(response => response.json())
                     .then(data => {
-                        this.drawBoard(data.boardSize, data.positions, data.round, data.winner, data.state, data.metrics);
+                        this.updateData(data.name, data.boardSize, data.positions, data.round, data.winner, data.state, data.metrics);
                     });
 
             }
