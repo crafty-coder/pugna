@@ -52,7 +52,7 @@ object Universe extends Logging {
     Actor
       .immutable {
         case (ctx, CreateGame(gameRequest, replyTo)) =>
-          val gameId = numberOfGames.toString
+          val gameId = System.currentTimeMillis().toString + '-' + numberOfGames.toString
           val gameSupervision =
             supervise(Game(gameId, gameRequest.name, playerGateway)).onFailure[Exception](resume)
           val game: ActorRef[Game.Command] =

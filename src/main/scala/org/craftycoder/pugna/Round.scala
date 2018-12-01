@@ -29,7 +29,8 @@ object Round extends Logging {
   val MAX_MOVEMENTS_IN_PARALLEL = 10
   val SAFE_DISTANCE_TO_PARALLEL = 5
 
-  def apply(state: BoardState,
+  def apply(gameId: String,
+            state: BoardState,
             players: Seq[Player],
             playerGateway: PlayerGateway,
             board: ActorRef[Board.Command]): Behavior[Round.Command] =
@@ -41,7 +42,8 @@ object Round extends Logging {
       logger.debug(s"Round ${state.round} Created")
       ctx.self ! NextMove
       val shufflePositions = scala.util.Random.shuffle(state.positions)
-      roundInProgress(state,
+      roundInProgress(gameId,
+                      state,
                       players,
                       shufflePositions,
                       Set.empty,
@@ -78,7 +80,8 @@ object Round extends Logging {
     Math.max(xDistance, yDistance)
   }
 
-  private def roundInProgress(state: BoardState,
+  private def roundInProgress(gameId: String,
+                              state: BoardState,
                               players: Seq[Player],
                               remainingPositionsToMove: Seq[Position],
                               positionsInMovement: Set[Position],
@@ -95,7 +98,7 @@ object Round extends Logging {
         )
         positionsToMoveInParallel.foreach { positionToMove =>
           getPlayerFromPosition(players, positionToMove).foreach { player =>
-            playerGateway.playerNextMovement(player, state, positionToMove).andThen {
+            playerGateway.playerNextMovement(player, "gameId", state, positionToMove).andThen {
               case Success(movement) ⇒
                 board ! Board.Move(positionToMove, movement, boardAdapter)
               case Failure(f) ⇒
@@ -104,7 +107,8 @@ object Round extends Logging {
           }
         }
 
-        roundInProgress(state,
+        roundInProgress(gameId,
+                        state,
                         players,
                         remainingPositionsToMove diff positionsToMoveInParallel.toSeq,
                         positionsToMoveInParallel,
@@ -122,7 +126,8 @@ object Round extends Logging {
             Actor.stopped
           } else {
             ctx.self ! NextMove
-            roundInProgress(newState,
+            roundInProgress(gameId,
+                            newState,
                             players,
                             remainingPositionsToMoveAlive,
                             currentPositionsInMovement,
@@ -132,7 +137,8 @@ object Round extends Logging {
           }
 
         } else {
-          roundInProgress(newState,
+          roundInProgress(gameId,
+                          newState,
                           players,
                           remainingPositionsToMoveAlive,
                           currentPositionsInMovement,
@@ -150,7 +156,8 @@ object Round extends Logging {
             Actor.stopped
           } else {
             ctx.self ! NextMove
-            roundInProgress(state,
+            roundInProgress(gameId,
+                            state,
                             players,
                             remainingPositionsToMove,
                             currentPositionsInMovement,
@@ -159,7 +166,8 @@ object Round extends Logging {
                             board)
           }
         } else {
-          roundInProgress(state,
+          roundInProgress(gameId,
+                          state,
                           players,
                           remainingPositionsToMove,
                           currentPositionsInMovement,

@@ -99,7 +99,7 @@ object Game extends Logging {
           Actor.same
         } else {
 
-          val board: ActorRef[Board.Command] = createBoard(players, playerGateway, ctx)
+          val board: ActorRef[Board.Command] = createBoard(id, players, playerGateway, ctx)
           replyTo ! GameStarted
           Actor.deferred { ctx =>
             board ! Board.NewRound
@@ -125,10 +125,12 @@ object Game extends Logging {
 
     }
 
-  protected def createBoard(players: Seq[Player],
+  protected def createBoard(gameId: String,
+                            players: Seq[Player],
                             playerGateway: PlayerGateway,
                             ctx: ActorContext[Game.Command]): ActorRef[Board.Command] =
-    ctx.spawn(Board(players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self), Board.Name)
+    ctx.spawn(Board(gameId, players, BOARD_SIZE, NUM_SOLDIERS_PLAYER, playerGateway, ctx.self),
+              Board.Name)
 
   private def gameStarted(id: String,
                           name: String,

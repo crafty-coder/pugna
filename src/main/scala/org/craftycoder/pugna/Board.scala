@@ -22,12 +22,16 @@ import org.apache.logging.log4j.scala.Logging
 
 object Board extends Logging {
 
-  val Name = "board"
+  val Name              = "board"
+  val INITIAL_HITPOINTS = 5
+  val INITIAL_LEVEL     = 1
+  val MAX_LEVEL         = 3
 
   def getBoardState(replyTo: ActorRef[GetBoardStateReply]): GetBoardState =
     GetBoardState(replyTo)
 
-  def apply(players: Seq[Player],
+  def apply(gameId: String,
+            players: Seq[Player],
             boardSize: Int,
             numOfSoldiers: Int,
             playerGateway: PlayerGateway,
@@ -38,11 +42,12 @@ object Board extends Logging {
 
       val state = calculateBoardState(occupiedPositions, 0, boardSize, players)
       logger.debug("Board created and running")
-      runningBoard(state, players, playerGateway, game)
+      runningBoard(gameId, state, players, playerGateway, game)
 
     }
 
-  private def runningBoard(state: BoardState,
+  private def runningBoard(gameId: String,
+                           state: BoardState,
                            players: Seq[Player],
                            playerGateway: PlayerGateway,
                            game: ActorRef[Game.Command]): Behavior[Command] =
@@ -57,26 +62,31 @@ object Board extends Logging {
           case MovementResult(Some(newState), None) =>
             logger.debug("Movement Applied!")
             replyTo ! MoveApplied(newState, position)
-            runningBoard(newState, players, playerGateway, game)
+            runningBoard(gameId, newState, players, playerGateway, game)
           case MovementResult(Some(newState), Some((killer, killed))) =>
             logger.debug(s"Movement Applied: $killer has killed $killed")
             val metricsUpdated = addKillingToMetrics(killer, killed, newState.metrics)
             replyTo ! MoveApplied(newState, position)
-            runningBoard(newState.copy(metrics = metricsUpdated), players, playerGateway, game)
+            runningBoard(gameId,
+                         newState.copy(metrics = metricsUpdated),
+                         players,
+                         playerGateway,
+                         game)
           case _ =>
             logger.debug(s"Invalid Move($position, $movement)! state: $state")
             val metricsUpdated = addInvalidMoveToMetrics(position.playerName, state.metrics)
             replyTo ! InvalidMove(position)
-            runningBoard(state.copy(metrics = metricsUpdated), players, playerGateway, game)
+            runningBoard(gameId, state.copy(metrics = metricsUpdated), players, playerGateway, game)
         }
       case (ctx, NewRound) =>
         logger.debug("Round Started")
-        ctx.spawn(Round(state, players, playerGateway, ctx.self), s"${Round.Name}-${state.round}")
+        ctx.spawn(Round(gameId, state, players, playerGateway, ctx.self),
+                  s"${Round.Name}-${state.round}")
         Actor.same
       case (_, RoundFinished) =>
         logger.debug("Round Finished")
         game ! Game.RoundFinished(state.round + 1, positions = state.positions)
-        runningBoard(state.copy(round = state.round + 1), players, playerGateway, game)
+        runningBoard(gameId, state.copy(round = state.round + 1), players, playerGateway, game)
 
     }
 
@@ -115,26 +125,57 @@ object Board extends Logging {
           case None =>
             logger.debug(s"Moved to $targetCoordinates")
             val newPositions = boardState.positions
-              .filterNot(_ == position) :+ Position(targetCoordinates, position.playerName)
+              .filterNot(_ == position) :+ Position(targetCoordinates,
+                                                    position.playerName,
+                                                    position.hitPoints,
+                                                    position.level)
             MovementResult(Some(boardState.copy(positions = newPositions)), None)
-          case Some(occupiedPosition) if occupiedPosition.playerName != position.playerName =>
-            val killed = occupiedPosition.playerName
-            val killer = position.playerName
+          case Some(victimPosition)
+              if victimPosition.playerName != position.playerName && victimPosition.hitPoints <= position.level =>
+            val killed   = victimPosition.playerName
+            val attacker = position.playerName
 
-            logger.debug(s"$killer has killed $killed on ${occupiedPosition.coordinate}")
-
-            val positionsAfterKill: Seq[Position] =
-              boardState.positions.filterNot(p => p.coordinate == occupiedPosition.coordinate)
-
-            val respawnCoordinate =
-              getFreeCoordinateForPlayer(playerIndex, boardState.boardSize, positionsAfterKill)
-            logger.debug(s"$killer got new position: $respawnCoordinate for his killing")
-            val newPositions: Seq[Position] = positionsAfterKill :+ Position(
-              respawnCoordinate,
-              position.playerName
+            logger.debug(
+              s"$attacker - (level: ${position.level})  has killed $killed - (hitpoints: ${victimPosition.hitPoints}) on ${victimPosition.coordinate}"
             )
 
-            MovementResult(Some(boardState.copy(positions = newPositions)), Some(killer, killed))
+            val positionsAfterHit: Seq[Position] =
+              boardState.positions.filterNot(
+                p =>
+                  p.coordinate == victimPosition.coordinate || p.coordinate == position.coordinate
+              )
+
+            val respawnCoordinate =
+              getFreeCoordinateForPlayer(playerIndex, boardState.boardSize, positionsAfterHit)
+            logger.debug(s"$attacker got new position: $respawnCoordinate for his killing")
+
+            val newPosition =
+              Position(respawnCoordinate, position.playerName, INITIAL_HITPOINTS, INITIAL_LEVEL)
+            val killerStronger = position.copy(level = Math.min(position.level + 1, MAX_LEVEL))
+
+            val newPositions: Seq[Position] = positionsAfterHit :+ newPosition :+ killerStronger
+
+            MovementResult(Some(boardState.copy(positions = newPositions)), Some(attacker, killed))
+
+          case Some(victimPosition)
+              if victimPosition.playerName != position.playerName && victimPosition.hitPoints > position.level =>
+            val victim   = victimPosition.playerName
+            val attacker = position.playerName
+
+            logger.debug(
+              s"$attacker has attack $victim attack with strength (${position.level}) in ${victimPosition.coordinate} . $victim has survive. New hitpoints ${victimPosition.hitPoints - position.level} "
+            )
+
+            val positionsAfterHit: Seq[Position] =
+              boardState.positions.filterNot(p => p.coordinate == victimPosition.coordinate)
+
+            val victimNewPosition =
+              victimPosition.copy(hitPoints = victimPosition.hitPoints - position.level)
+
+            val newPositions: Seq[Position] = positionsAfterHit :+ victimNewPosition
+
+            MovementResult(Some(boardState.copy(positions = newPositions)), Some(attacker, victim))
+
           case _ =>
             logger.debug(s"Stays")
             MovementResult(Some(boardState), None)
@@ -192,8 +233,8 @@ object Board extends Logging {
       i               <- 0 until numOfSoldiers
       (player, index) <- players.zipWithIndex
     } yield {
-      var coordinate = getFreeCoordinateForPlayer(index, boardSize, positions)
-      positions = positions :+ Position(coordinate, player.name)
+      val coordinate = getFreeCoordinateForPlayer(index, boardSize, positions)
+      positions = positions :+ Position(coordinate, player.name, INITIAL_HITPOINTS, INITIAL_LEVEL)
 
     }
     positions

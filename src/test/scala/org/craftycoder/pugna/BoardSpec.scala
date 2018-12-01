@@ -24,8 +24,8 @@ class BoardSpec extends WordSpec with Matchers {
 
   "Board" when {
 
-    val player1 = Player("name1", "host1")
-    val player2 = Player("name2", "host2")
+    val player1 = Player("name1", "host1","color1")
+    val player2 = Player("name2", "host2","color2")
     val players = Seq(player1, player2)
 
     "Is created" should {
